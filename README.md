@@ -12,7 +12,7 @@ Type a city or country. Get a multi-day itinerary with stops connected in a logi
 
 ## Tech stack
 
-- Next.js 15 (Pages Router) + Tailwind CSS
+- Next.js 14 (Pages Router) + TypeScript + Tailwind CSS
 - shadcn/ui for components
 - Groq API (llama-3.3-70b-versatile) for trip generation
 - Nominatim (OpenStreetMap) for geocoding — no API key needed
@@ -50,35 +50,35 @@ vercel --prod
 
 ```
 pages/
-  index.jsx          Single page app — entire UI
-  _app.jsx           App wrapper with Toaster
+  index.tsx          Single page app — entire UI
+  _app.tsx           App wrapper with Toaster
   api/
-    generate.js      Groq API proxy (keeps API key server-side)
+    generate.ts      Groq API proxy (keeps API key server-side)
 
 components/
   ui/                shadcn components (do not edit directly)
-  TopBar.jsx
-  HistoryDrawer.jsx
-  IntakeScreen.jsx
-  FlowGPS.jsx
-  FlowDestination.jsx
-  LoadingScreen.jsx
-  ResultsScreen.jsx
-  FilterBar.jsx
-  StopCardGPS.jsx
-  StopCardDest.jsx
-  ActionBar.jsx
-  TripStats.jsx
+  TopBar.tsx
+  HistoryDrawer.tsx
+  IntakeScreen.tsx
+  FlowGPS.tsx
+  FlowDestination.tsx
+  LoadingScreen.tsx
+  ResultsScreen.tsx
+  FilterBar.tsx
+  StopCardGPS.tsx
+  StopCardDest.tsx
+  ActionBar.tsx
+  TripStats.tsx
 
 lib/
-  constants.js       All constants and config values
-  storage.js         localStorage read/write
-  groq.js            Groq API client
-  geo.js             Haversine distance, nearest-neighbor sort
-  format.js          formatDays, formatDist, groupStopsByDay
-  maps.js            Google Maps URL builder
-  sharing.js         Base64 trip encode/decode for URL sharing
-  utils.js           cn() helper (shadcn default)
+  constants.ts       All constants and TypeScript types
+  storage.ts         localStorage read/write
+  groq.ts            Groq API client
+  geo.ts             Haversine distance, nearest-neighbor sort
+  format.ts          formatDays, formatDist, groupStopsByDay
+  maps.ts            Google Maps URL builder
+  sharing.ts         Base64 trip encode/decode for URL sharing
+  utils.ts           cn() helper (shadcn default)
 
 .claude/             Internal planning docs (not committed)
 CLAUDE.md            Claude instructions (committed)

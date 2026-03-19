@@ -7,6 +7,8 @@ node_modules/
 dist/
 dist-ssr/
 build/
+.next/
+out/
 
 # Environment variables — NEVER commit these
 .env
@@ -18,12 +20,9 @@ build/
 # Internal planning docs — Claude eyes only
 .claude/
 
-# All markdown files EXCEPT README.md and CLAUDE.md
+# All markdown files except README.md
 *.md
 !README.md
-!CLAUDE.md
-# START.md is a local session helper — not committed
-START.md
 
 # Editor and OS files
 .DS_Store

@@ -1,0 +1,83 @@
+import { Flow, TripInput } from '@/lib/constants'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { MapPin, Globe } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import FlowGPS from './FlowGPS'
+import FlowDestination from './FlowDestination'
+
+interface IntakeScreenProps {
+  currentFlow: Flow
+  onFlowChange: (flow: Flow) => void
+  formData: TripInput
+  onFormChange: (data: TripInput) => void
+  onGenerate: () => void
+}
+
+export default function IntakeScreen({
+  currentFlow,
+  onFlowChange,
+  formData,
+  onFormChange,
+  onGenerate,
+}: IntakeScreenProps) {
+  return (
+    <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      {/* Flow selector */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <Card
+          className={cn(
+            'relative flex-1 p-4 cursor-pointer transition-all',
+            currentFlow === 'gps'
+              ? 'border-2 border-emerald-500 bg-emerald-50'
+              : 'border border-slate-200 hover:border-slate-300'
+          )}
+          onClick={() => onFlowChange('gps')}
+        >
+          {currentFlow === 'gps' && (
+            <Badge className="absolute top-2 right-2 bg-emerald-600 text-white text-xs">
+              Selected
+            </Badge>
+          )}
+          <div className="flex items-center gap-2 mb-1">
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            <span className="font-semibold text-slate-900 text-sm">I know where I am</span>
+          </div>
+          <p className="text-xs text-slate-500">
+            Share your GPS location or type an address. Get a day-trip sorted nearest to farthest.
+          </p>
+        </Card>
+
+        <Card
+          className={cn(
+            'relative flex-1 p-4 cursor-pointer transition-all',
+            currentFlow === 'destination'
+              ? 'border-2 border-emerald-500 bg-emerald-50'
+              : 'border border-slate-200 hover:border-slate-300'
+          )}
+          onClick={() => onFlowChange('destination')}
+        >
+          {currentFlow === 'destination' && (
+            <Badge className="absolute top-2 right-2 bg-emerald-600 text-white text-xs">
+              Selected
+            </Badge>
+          )}
+          <div className="flex items-center gap-2 mb-1">
+            <Globe className="w-4 h-4 text-emerald-600" />
+            <span className="font-semibold text-slate-900 text-sm">I have a destination</span>
+          </div>
+          <p className="text-xs text-slate-500">
+            Type a city or country. Get a multi-day chain route with Google Maps links.
+          </p>
+        </Card>
+      </div>
+
+      {/* Flow form */}
+      {currentFlow === 'gps' ? (
+        <FlowGPS formData={formData} onFormChange={onFormChange} onGenerate={onGenerate} />
+      ) : (
+        <FlowDestination formData={formData} onFormChange={onFormChange} onGenerate={onGenerate} />
+      )}
+    </main>
+  )
+}
