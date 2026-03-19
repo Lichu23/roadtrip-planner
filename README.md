@@ -12,7 +12,7 @@ Type a city or country. Get a multi-day itinerary with stops connected in a logi
 
 ## Tech stack
 
-- Next.js 14 (Pages Router) + TypeScript + Tailwind CSS
+- Next.js 16 (Pages Router) + TypeScript + Tailwind CSS
 - shadcn/ui for components
 - Groq API (llama-3.3-70b-versatile) for trip generation
 - Nominatim (OpenStreetMap) for geocoding — no API key needed
