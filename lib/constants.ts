@@ -45,6 +45,7 @@ export interface TripInput {
   lon: number | null
   destination: string
   duration: number
+  stopsCount: number
   styles: TravelStyle[]
   transport: Transport
   notes: string
@@ -97,6 +98,8 @@ export const DURATION_OPTIONS: Record<Flow, number[]> = {
   destination: [3, 5, 7, 10, 14],
 }
 
+export const STOPS_COUNT_OPTIONS = [3, 5, 7, 10]
+
 export const LOADING_MESSAGES = [
   'Finding top destinations...',
   'Sorting by distance...',
@@ -119,6 +122,7 @@ export const DEFAULT_FORM_DATA: TripInput = {
   lon: null,
   destination: '',
   duration: 5,
+  stopsCount: 5,
   styles: ['culture', 'nature'],
   transport: 'car',
   notes: '',

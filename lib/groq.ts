@@ -1,7 +1,112 @@
-import { TripResult } from './constants'
+import { TripResult, TripInput } from './constants'
 
 const PRIMARY_MODEL = 'llama-3.3-70b-versatile'
 const FALLBACK_MODEL = 'llama-3.1-8b-instant'
+
+// ─── Prompts ──────────────────────────────────────────────────────────────────
+
+export function buildFlow1Prompt(input: TripInput): string {
+  const { locationName, lat, lon, duration, stopsCount, styles, transport, notes } = input
+  const count = stopsCount ?? 5
+  return `You are a travel planning assistant. Generate a road trip itinerary.
+
+User's starting location: ${locationName} (coordinates: ${lat}, ${lon})
+Trip duration: ${duration} day${duration > 1 ? 's' : ''}
+Number of stops: ${count}
+Travel styles: ${styles.join(', ')}
+Transport: ${transport}
+Notes: ${notes || 'none'}
+
+Return ONLY a valid JSON object. No explanation, no markdown, no extra text.
+
+Rules:
+- Generate exactly ${count} stops
+- PRIORITY: Fill stops with places INSIDE ${locationName} city/town first (museums, monuments, neighborhoods, parks within the city). Only go outside the city if there are not enough places inside to reach ${count} stops.
+- For 1 day: keep all stops within 30km of the start location
+- For 2+ days: stops can extend up to 150km from start
+- Each stop must have real, accurate GPS coordinates
+- Coordinates must match the actual real-world location of each stop
+- suggestedDays can be 0.5, 1, 1.5, 2 — must sum to approximately ${duration}
+- highlights: exactly 2-3 short items
+- bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
+- practicalInfo.bestTime: must be one of: Morning, Afternoon, Full day
+- totalKm: realistic total driving/travel distance in km
+
+JSON structure:
+{
+  "title": "string — engaging trip title",
+  "totalKm": number,
+  "stops": [
+    {
+      "name": "string",
+      "type": "string — Cathedral / Museum / Beach / Village / Park / etc",
+      "description": "string — exactly 2 sentences, specific and informative",
+      "lat": number,
+      "lon": number,
+      "suggestedDays": number,
+      "highlights": ["string", "string", "string"],
+      "bestFor": "string",
+      "practicalInfo": {
+        "entranceFee": "string — specific if known, otherwise Free or Varies",
+        "bestTime": "string",
+        "tip": "string — one practical sentence a visitor would appreciate"
+      }
+    }
+  ]
+}`
+}
+
+export function buildFlow2Prompt(input: TripInput): string {
+  const { destination, duration, styles, transport, notes } = input
+  return `You are a travel planning assistant. Generate a road trip itinerary.
+
+Destination: ${destination}
+Trip duration: ${duration} days
+Travel styles: ${styles.join(', ')}
+Transport: ${transport}
+Notes: ${notes || 'none'}
+
+Return ONLY a valid JSON object. No explanation, no markdown, no extra text.
+
+Rules:
+- Generate exactly ${Math.min(Math.max(duration, 4), 12)} stops
+- Choose the most important tourist destinations in or near ${destination}
+- The FIRST stop must be the most logical entry point to the region (major city, transport hub, or geographic starting point). Explain why in entryPointReason.
+- Do NOT sort stops — return them in any order. The app will sort them using nearest-neighbor algorithm.
+- Each stop must have real, accurate GPS coordinates
+- Coordinates must match the actual real-world location of each stop
+- suggestedDays can be 0.5, 1, 1.5, 2 — total should approximately equal ${duration}
+- highlights: exactly 2-3 short items
+- bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
+- practicalInfo.bestTime: must be one of: Morning, Afternoon, Full day
+- totalKm: realistic total driving distance for the full chain route in km
+
+JSON structure:
+{
+  "title": "string — engaging trip title",
+  "totalKm": number,
+  "entryPointReason": "string — one sentence explaining why the first stop is the logical entry point",
+  "stops": [
+    {
+      "name": "string",
+      "type": "string — City / Hill Town / Village / Beach / Park / etc",
+      "description": "string — exactly 2 sentences, specific and informative",
+      "lat": number,
+      "lon": number,
+      "suggestedDays": number,
+      "highlights": ["string", "string", "string"],
+      "bestFor": "string",
+      "practicalInfo": {
+        "entranceFee": "string",
+        "bestTime": "string",
+        "tip": "string — one practical sentence"
+      }
+    }
+  ]
+}`
+}
+
+// ─── API call ─────────────────────────────────────────────────────────────────
 
 export async function generateTrip(prompt: string, useFallback = false): Promise<TripResult> {
   const model = useFallback ? FALLBACK_MODEL : PRIMARY_MODEL
