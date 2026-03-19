@@ -177,34 +177,35 @@ components.json        ← shadcn config file
 
 ```
 pages/
-  index.jsx              ← only page, full app lives here
+  index.tsx              ← only page, full app lives here
+  _app.tsx               ← app wrapper with Toaster
   api/
-    generate.js          ← Next.js API route (Groq proxy)
+    generate.ts          ← Next.js API route (Groq proxy)
 
 components/
   ui/                    ← shadcn components (auto-generated, do not edit)
-  TopBar.jsx
-  HistoryDrawer.jsx
-  IntakeScreen.jsx
-  FlowGPS.jsx
-  FlowDestination.jsx
-  LoadingScreen.jsx
-  ResultsScreen.jsx
-  FilterBar.jsx
-  StopCardGPS.jsx
-  StopCardDest.jsx
-  ActionBar.jsx
-  TripStats.jsx
+  TopBar.tsx
+  HistoryDrawer.tsx
+  IntakeScreen.tsx
+  FlowGPS.tsx
+  FlowDestination.tsx
+  LoadingScreen.tsx
+  ResultsScreen.tsx
+  FilterBar.tsx
+  StopCardGPS.tsx
+  StopCardDest.tsx
+  ActionBar.tsx
+  TripStats.tsx
 
 lib/
-  constants.js           ← all constants
-  storage.js             ← all localStorage logic
-  groq.js                ← Groq API client
-  geo.js                 ← haversine, sortByNearest
-  format.js              ← formatDays, formatDist
-  maps.js                ← Google Maps URL builder
-  sharing.js             ← base64 encode/decode
-  utils.js               ← cn() and other helpers (shadcn default)
+  constants.ts           ← all constants
+  storage.ts             ← all localStorage logic
+  groq.ts                ← Groq API client
+  geo.ts                 ← haversine, sortByNearest
+  format.ts              ← formatDays, formatDist
+  maps.ts                ← Google Maps URL builder
+  sharing.ts             ← base64 encode/decode
+  utils.ts               ← cn() and other helpers (shadcn default)
 ```
 
 ### General rules
@@ -212,8 +213,24 @@ lib/
 - One component per file, PascalCase filename matches component name
 - No inline styles — Tailwind classes only
 - No hardcoded user-visible strings — use constants
-- Use `.jsx` extension for all React component files
-- Use `cn()` from `lib/utils.js` for all conditional class merging
+- Use `.tsx` extension for all React component files
+- Use `.ts` extension for all non-component TypeScript files
+- Use `cn()` from `lib/utils.ts` for all conditional class merging
+
+### TypeScript rules
+
+- Always type component props using `interface` — never use untyped props
+- Use the interfaces defined in `SCHEMA.md` for all data shapes — do not invent new ones
+- Never use `any` — use `unknown` and narrow the type if needed
+- Type all function parameters and return values in `lib/` utility files
+- Props interfaces are defined at the top of each component file, named `[ComponentName]Props`
+- Example:
+  ```ts
+  interface StopCardGPSProps {
+    stop: Stop
+    onVisitedChange: (id: number, visited: boolean) => void
+  }
+  ```
 
 ### State management
 
@@ -227,8 +244,8 @@ lib/
 ### Next.js rules
 
 - Pages Router only — no App Router, no server components, no `"use client"` directives
-- `pages/index.jsx` is the entire app (single page application)
-- `pages/api/generate.js` is the only API route
+- `pages/index.tsx` is the entire app (single page application)
+- `pages/api/generate.ts` is the only API route
 - `GROQ_API_KEY` is server-side only — never use `NEXT_PUBLIC_` prefix for it
 - Never import or reference `process.env.GROQ_API_KEY` outside `pages/api/`
 
