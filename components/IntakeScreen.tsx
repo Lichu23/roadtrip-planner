@@ -1,7 +1,8 @@
 import { Flow, TripInput } from '@/lib/constants'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Globe } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { MapPin, Globe, ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import FlowGPS from './FlowGPS'
 import FlowDestination from './FlowDestination'
@@ -12,6 +13,7 @@ interface IntakeScreenProps {
   formData: TripInput
   onFormChange: (data: TripInput) => void
   onGenerate: () => void
+  onCancel?: () => void
 }
 
 export default function IntakeScreen({
@@ -20,9 +22,22 @@ export default function IntakeScreen({
   formData,
   onFormChange,
   onGenerate,
+  onCancel,
 }: IntakeScreenProps) {
   return (
     <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      {/* Cancel button — only shown when editing an existing trip */}
+      {onCancel && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="text-slate-500 hover:text-slate-700 -ml-2"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          Back to trip
+        </Button>
+      )}
       {/* Flow selector */}
       <div className="flex flex-col md:flex-row gap-3">
         <Card

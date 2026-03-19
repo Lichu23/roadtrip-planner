@@ -1,5 +1,5 @@
 import { Trip, TRANSPORT_MODES } from '@/lib/constants'
-import { buildGoogleMapsURL } from '@/lib/maps'
+import { buildGoogleMapsURL, buildDayGroupURLs } from '@/lib/maps'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Map, Copy, ExternalLink } from 'lucide-react'
@@ -34,6 +34,10 @@ export default function ActionBar({ trip }: ActionBarProps) {
     ? `https://www.openstreetmap.org/#map=10/${stops[0].lat}/${stops[0].lon}`
     : 'https://www.openstreetmap.org'
 
+  const dayGroupUrls = !isGPS && stops.length > 5
+    ? buildDayGroupURLs(stops, gmapsMode)
+    : []
+
   return (
     <div className="space-y-3 pt-2">
       {/* Primary: open full route in Google Maps */}
@@ -43,8 +47,21 @@ export default function ActionBar({ trip }: ActionBarProps) {
         disabled={!mapsUrl}
       >
         <Map className="w-4 h-4 mr-2" />
-        Open in Google Maps
+        Open full route in Google Maps
       </Button>
+
+      {/* Per-day route buttons (destination flow, >5 stops) */}
+      {dayGroupUrls.map(({ label, url }) => (
+        <Button
+          key={label}
+          variant="outline"
+          className="w-full h-9"
+          onClick={() => window.open(url, '_blank')}
+        >
+          <Map className="w-3.5 h-3.5 mr-2" />
+          {label} route
+        </Button>
+      ))}
 
       {/* OSM fallback */}
       <Button

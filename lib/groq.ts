@@ -26,7 +26,7 @@ Rules:
 - For 2+ days: stops can extend up to 150km from start
 - Each stop must have real, accurate GPS coordinates
 - Coordinates must match the actual real-world location of each stop
-- suggestedDays can be 0.5, 1, 1.5, 2 — must sum to approximately ${duration}
+- suggestedDays MUST be exactly one of: 0.5, 1, 1.5, or 2 — no other values allowed, must sum to approximately ${duration}
 - highlights: exactly 2-3 short items
 - bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
 - practicalInfo.bestTime: must be one of: Morning, Afternoon, Full day
@@ -75,7 +75,7 @@ Rules:
 - Do NOT sort stops — return them in any order. The app will sort them using nearest-neighbor algorithm.
 - Each stop must have real, accurate GPS coordinates
 - Coordinates must match the actual real-world location of each stop
-- suggestedDays can be 0.5, 1, 1.5, 2 — total should approximately equal ${duration}
+- suggestedDays MUST be exactly one of: 0.5, 1, 1.5, or 2 — no other values allowed, total should approximately equal ${duration}
 - highlights: exactly 2-3 short items
 - bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
 - practicalInfo.bestTime: must be one of: Morning, Afternoon, Full day

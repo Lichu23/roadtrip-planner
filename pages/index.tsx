@@ -14,100 +14,11 @@ import {
   DEFAULT_FORM_DATA,
   LOADING_MESSAGES,
 } from '@/lib/constants'
-import { generateTrip, buildFlow1Prompt } from '@/lib/groq'
+import { generateTrip, buildFlow1Prompt, buildFlow2Prompt } from '@/lib/groq'
 import { sortByNearest } from '@/lib/geo'
 import { formatDays } from '@/lib/format'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-// ─── Dummy destination trip — kept for Phase 3 (destination flow not wired yet) ──
-
-const DUMMY_DEST_TRIP: Trip = {
-  id: 'dummy-dest-001',
-  createdAt: new Date().toISOString(),
-  flow: 'destination',
-  input: {
-    locationName: '',
-    lat: null,
-    lon: null,
-    destination: 'Tuscany, Italy',
-    duration: 7,
-    styles: ['culture', 'architecture'],
-    transport: 'car',
-    notes: '',
-  },
-  result: {
-    title: 'Your 7-Day Tuscany Road Trip',
-    totalKm: 365,
-    entryPointReason:
-      'Florence is the logical entry point as it has the main international airport and is the cultural heart of Tuscany.',
-    stops: [
-      {
-        id: 1,
-        name: 'Florence',
-        type: 'City',
-        description:
-          'The cradle of the Renaissance, packed with world-class art and architecture. A single day barely scratches the surface of this extraordinary city.',
-        lat: 43.7696,
-        lon: 11.2558,
-        distFromPrev: 0,
-        suggestedDays: 2,
-        suggestedDaysLabel: '2 days',
-        highlights: ['Uffizi Gallery', 'Duomo', 'Ponte Vecchio'],
-        bestFor: 'culture',
-        practicalInfo: {
-          entranceFee: '€20 (Uffizi)',
-          bestTime: 'Full day',
-          tip: 'Book Uffizi tickets online at least 2 days in advance to skip the queue.',
-        },
-        day: 1,
-        dayLabel: 'Day 1',
-      },
-      {
-        id: 2,
-        name: 'Siena',
-        type: 'Hill Town',
-        description:
-          'A perfectly preserved medieval city centred on the magnificent shell-shaped Piazza del Campo. The city rivals Florence in artistic heritage.',
-        lat: 43.3186,
-        lon: 11.3307,
-        distFromPrev: 85,
-        suggestedDays: 1,
-        suggestedDaysLabel: '1 day',
-        highlights: ['Piazza del Campo', 'Duomo di Siena', 'Contrada districts'],
-        bestFor: 'architecture',
-        practicalInfo: {
-          entranceFee: '€4 (Duomo)',
-          bestTime: 'Morning',
-          tip: 'The city is entirely pedestrianized — park outside the walls.',
-        },
-        day: 3,
-        dayLabel: 'Day 3',
-      },
-      {
-        id: 3,
-        name: 'San Gimignano',
-        type: 'Village',
-        description:
-          'The medieval Manhattan of Tuscany, famous for its 14 surviving stone towers. A UNESCO World Heritage site that rewards early-morning visits.',
-        lat: 43.4678,
-        lon: 11.0423,
-        distFromPrev: 40,
-        suggestedDays: 0.5,
-        suggestedDaysLabel: 'Half a day',
-        highlights: ['Medieval towers', 'Piazza della Cisterna', 'Vernaccia wine'],
-        bestFor: 'architecture',
-        practicalInfo: {
-          entranceFee: 'Free (towers extra)',
-          bestTime: 'Morning',
-          tip: 'Visit early morning or late afternoon — midday crowds are intense.',
-        },
-        day: 4,
-        dayLabel: 'Day 4',
-      },
-    ],
-  },
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -119,6 +30,24 @@ function normalizeStops(raw: Stop[], fromLat: number, fromLon: number): Stop[] {
     suggestedDaysLabel: formatDays(s.suggestedDays),
     visited: false,
   }))
+}
+
+function normalizeDestStops(raw: Stop[]): Stop[] {
+  if (raw.length === 0) return []
+  const sorted = sortByNearest(raw, raw[0].lat, raw[0].lon)
+  let cumDays = 0
+  return sorted.map((s, i) => {
+    const day = Math.floor(cumDays) + 1
+    cumDays += s.suggestedDays
+    return {
+      ...s,
+      id: i + 1,
+      suggestedDaysLabel: formatDays(s.suggestedDays),
+      day,
+      dayLabel: `Day ${day}`,
+      visited: false,
+    }
+  })
 }
 
 // ─── Page component ───────────────────────────────────────────────────────────
@@ -182,13 +111,35 @@ export default function Home() {
     }
   }
 
-  // ─── Destination flow generate (Phase 3) ────────────────────────────────
+  // ─── Destination flow generate ───────────────────────────────────────────
 
-  function handleGenerateDest(input: TripInput) {
-    // Phase 3: wire up real Groq call
-    const dummy = { ...DUMMY_DEST_TRIP, input }
-    setTrip(dummy)
-    setCurrentState('results')
+  async function handleGenerateDest(input: TripInput) {
+    if (!input.destination.trim()) return
+
+    const prompt = buildFlow2Prompt(input)
+    setLastPrompt(prompt)
+    setCurrentState('loading')
+    setLoadingMessage(LOADING_MESSAGES[0])
+    setError(null)
+
+    try {
+      const result = await generateTrip(prompt)
+      const stops = normalizeDestStops(result.stops as Stop[])
+
+      const newTrip: Trip = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        flow: 'destination',
+        input,
+        result: { ...result, stops },
+      }
+
+      setTrip(newTrip)
+      setCurrentState('results')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+      setCurrentState('intake')
+    }
   }
 
   // ─── Unified generate ────────────────────────────────────────────────────
@@ -197,7 +148,7 @@ export default function Home() {
     if (currentFlow === 'gps') {
       await handleGenerateGPS(formData)
     } else {
-      handleGenerateDest(formData)
+      await handleGenerateDest(formData)
     }
   }
 
@@ -205,7 +156,7 @@ export default function Home() {
     if (currentFlow === 'gps') {
       await handleGenerateGPS(formData)
     } else {
-      handleGenerateDest(formData)
+      await handleGenerateDest(formData)
     }
   }
 
@@ -280,6 +231,7 @@ export default function Home() {
             formData={formData}
             onFormChange={setFormData}
             onGenerate={handleGenerate}
+            onCancel={trip ? () => setCurrentState('results') : undefined}
           />
           {error && (
             <div className="max-w-2xl mx-auto px-4 pb-6">

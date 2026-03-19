@@ -54,7 +54,7 @@ export default function StopCardDest({ stop, isFirst, isLast }: StopCardDestProp
           {/* Type + time */}
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="text-xs">{stop.type}</Badge>
-            <span className="text-xs text-slate-400">{stop.suggestedDaysLabel}</span>
+            <span className="text-xs text-slate-400">Suggested time: {stop.suggestedDaysLabel}</span>
           </div>
 
           {/* Description */}
