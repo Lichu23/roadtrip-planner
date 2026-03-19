@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Internal planning docs — Claude eyes only
+.claude/
+
+# All markdown files EXCEPT README.md and CLAUDE.md
+*.md
+!README.md
+!CLAUDE.md
+# START.md is a local session helper — not committed
+START.md
+
+# Editor and OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V8
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+logs/
+*.log
+
+# Cache
+.eslintcache
+.stylelintcache
+.cache/
+.parcel-cache/
+.vite/
+
+# Testing
+coverage/
