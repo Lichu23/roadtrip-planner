@@ -1,10 +1,13 @@
 import { Stop } from './constants'
 
 export function formatDays(days: number): string {
-  if (days === 0.5) return 'Half a day'
-  if (days === 1) return '1 day'
-  if (days === 1.5) return '1–2 days'
-  return `${days} days`
+  if (days <= 0.25) return '~1–2 hrs'
+  if (days <= 0.5) return '~3–4 hrs'
+  if (days <= 0.75) return '~5–6 hrs'
+  if (days <= 1) return 'Full day'
+  if (days <= 1.5) return '1–2 days'
+  if (days <= 2) return '2 days'
+  return `${Math.round(days)} days`
 }
 
 export function formatDist(km: number): string {
