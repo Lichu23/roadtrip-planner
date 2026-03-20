@@ -17,6 +17,17 @@ import {
 import { generateTrip, buildFlow1Prompt, buildFlow2Prompt } from '@/lib/groq'
 import { sortByNearest } from '@/lib/geo'
 import { formatDays } from '@/lib/format'
+import {
+  saveCurrentTrip,
+  loadCurrentTrip,
+  saveFormData,
+  loadFormData,
+  addToHistory,
+  loadHistory,
+  clearHistory,
+  clearCurrentTrip,
+} from '@/lib/storage'
+import { decodeTripFromURL } from '@/lib/sharing'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -63,7 +74,49 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [lastPrompt, setLastPrompt] = useState<string>('')
 
-  // Cycle loading messages while generating
+  // ─── On mount: restore from URL hash or localStorage ─────────────────────
+  useEffect(() => {
+    // URL hash takes priority
+    const tripFromURL = decodeTripFromURL()
+    if (tripFromURL) {
+      setTrip(tripFromURL)
+      setCurrentFlow(tripFromURL.flow)
+      setCurrentState('results')
+      return
+    }
+
+    // Fall back to saved current trip
+    const savedTrip = loadCurrentTrip()
+    if (savedTrip) {
+      setTrip(savedTrip)
+      setCurrentFlow(savedTrip.flow)
+      setCurrentState('results')
+    }
+
+    // Restore form data
+    const savedForm = loadFormData()
+    if (savedForm) {
+      setFormData(savedForm)
+      setCurrentFlow(savedForm.destination ? 'destination' : 'gps')
+    }
+  }, [])
+
+  // ─── On mount: load history ───────────────────────────────────────────────
+  useEffect(() => {
+    setHistory(loadHistory())
+  }, [])
+
+  // ─── Persist trip on every change ────────────────────────────────────────
+  useEffect(() => {
+    if (trip) saveCurrentTrip(trip)
+  }, [trip])
+
+  // ─── Persist form data on every change ───────────────────────────────────
+  useEffect(() => {
+    saveFormData(formData)
+  }, [formData])
+
+  // ─── Cycle loading messages while generating ─────────────────────────────
   useEffect(() => {
     if (currentState !== 'loading') return
     let i = 0
@@ -103,6 +156,8 @@ export default function Home() {
         result: { ...result, stops },
       }
 
+      addToHistory(newTrip)
+      setHistory(loadHistory())
       setTrip(newTrip)
       setCurrentState('results')
     } catch (err) {
@@ -134,6 +189,8 @@ export default function Home() {
         result: { ...result, stops },
       }
 
+      addToHistory(newTrip)
+      setHistory(loadHistory())
       setTrip(newTrip)
       setCurrentState('results')
     } catch (err) {
@@ -176,6 +233,8 @@ export default function Home() {
         input: formData,
         result: { ...result, stops },
       }
+      addToHistory(newTrip)
+      setHistory(loadHistory())
       setTrip(newTrip)
       setCurrentState('results')
     } catch (err) {
@@ -185,6 +244,15 @@ export default function Home() {
   }
 
   function handleEdit() {
+    setCurrentState('intake')
+    setError(null)
+  }
+
+  function handleNewTrip() {
+    clearCurrentTrip()
+    setTrip(null)
+    setFormData(DEFAULT_FORM_DATA)
+    setCurrentFlow('gps')
     setCurrentState('intake')
     setError(null)
   }
@@ -208,6 +276,7 @@ export default function Home() {
   }
 
   function handleClearHistory() {
+    clearHistory()
     setHistory([])
   }
 
@@ -275,6 +344,7 @@ export default function Home() {
           trip={trip}
           onEdit={handleEdit}
           onRegenerate={handleRegenerate}
+          onNewTrip={handleNewTrip}
           onVisitedChange={handleVisitedChange}
         />
       )}

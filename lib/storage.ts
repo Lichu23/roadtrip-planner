@@ -61,3 +61,8 @@ export function clearHistory(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(LS_KEYS.HISTORY)
 }
+
+export function clearCurrentTrip(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(LS_KEYS.CURRENT_TRIP)
+}
