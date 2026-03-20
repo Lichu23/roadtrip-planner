@@ -11,6 +11,7 @@ interface ResultsScreenProps {
   trip: Trip
   onEdit: () => void
   onRegenerate: () => void
+  onNewTrip: () => void
   onVisitedChange: (id: number, visited: boolean) => void
 }
 
@@ -18,6 +19,7 @@ export default function ResultsScreen({
   trip,
   onEdit,
   onRegenerate,
+  onNewTrip,
   onVisitedChange,
 }: ResultsScreenProps) {
   const { result, flow } = trip
@@ -34,7 +36,7 @@ export default function ResultsScreen({
       <div className="max-w-2xl mx-auto px-4 py-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
           {/* Filter bar */}
-          <FilterBar trip={trip} onEdit={onEdit} onRegenerate={onRegenerate} />
+          <FilterBar trip={trip} onEdit={onEdit} onRegenerate={onRegenerate} onNewTrip={onNewTrip} />
 
           {/* Trip title */}
           <div>

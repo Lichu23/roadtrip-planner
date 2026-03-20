@@ -1,22 +1,21 @@
 import { Trip, TRANSPORT_MODES } from '@/lib/constants'
 import { buildGoogleMapsURL, buildDayGroupURLs } from '@/lib/maps'
+import { encodeTripToURL } from '@/lib/sharing'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Map, Copy, ExternalLink } from 'lucide-react'
-import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface ActionBarProps {
   trip: Trip
 }
 
 export default function ActionBar({ trip }: ActionBarProps) {
-  const [copied, setCopied] = useState(false)
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const shareUrl = encodeTripToURL(trip)
 
   function handleCopy() {
     navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      toast('Link copied!')
     })
   }
 
@@ -82,7 +81,7 @@ export default function ActionBar({ trip }: ActionBarProps) {
         />
         <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
           <Copy className="w-3.5 h-3.5 mr-1.5" />
-          {copied ? 'Copied!' : 'Copy'}
+          Copy
         </Button>
       </div>
     </div>
