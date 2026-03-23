@@ -14,8 +14,9 @@ import {
   DEFAULT_FORM_DATA,
 } from '@/lib/constants'
 import { Lang, translations } from '@/lib/i18n'
-import { generateTrip, buildFlow1Prompt, buildFlow2Prompt } from '@/lib/groq'
+import { generateTrip, buildFlow1Prompt, buildFlow2Prompt, buildOTMFlow1Prompt, buildOTMFlow2Prompt } from '@/lib/groq'
 import { sortByNearest, geocodeAllStops } from '@/lib/geo'
+import { fetchPOIs, styleToKinds, radiusByDuration, deduplicatePOIs } from '@/lib/opentripmap'
 import { formatDays } from '@/lib/format'
 import {
   saveCurrentTrip,
@@ -157,21 +158,53 @@ export default function Home() {
     // Need at least a location name or coordinates
     if (!input.locationName.trim() && input.lat === null) return
 
-    // If we have a name but no coords, use 0,0 as fallback — Groq will still
-    // generate based on the name text in the prompt
     const lat = input.lat ?? 0
     const lon = input.lon ?? 0
 
-    const prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
-    setLastPrompt(prompt)
     setCurrentState('loading')
     setLoadingMessage(t.loadingMessages[0])
     setError(null)
 
     try {
+      let prompt: string
+      let poisForOverride: { lat: number; lon: number }[] = []
+
+      if (input.lat !== null && input.lon !== null) {
+        // OTM path: fetch real POIs
+        setLoadingMessage(t.loadingMessages[1]) // "Finding real places..."
+        const kinds = styleToKinds(input.styles)
+        const radius = radiusByDuration(input.duration)
+        const rate = input.duration <= 3 ? 3 : 2
+        const raw = await fetchPOIs(lat, lon, radius, kinds, input.stopsCount * 2, rate)
+        const pois = deduplicatePOIs(raw).slice(0, input.stopsCount)
+
+        if (pois.length > 0) {
+          poisForOverride = pois.map((p) => ({ lat: p.lat, lon: p.lon }))
+          setLoadingMessage(t.loadingMessages[2]) // "Generating descriptions..."
+          prompt = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, t.groqLang)
+        } else {
+          // OTM returned nothing — fall back to Groq-only
+          prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
+        }
+      } else {
+        // No coords — Groq-only path
+        prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
+      }
+
+      setLastPrompt(prompt)
       const result = await generateTrip(prompt)
-      const geocoded = await geocodeAllStops(result.stops as Stop[], input.locationName)
-      const stops = normalizeStops(geocoded, lat, lon)
+
+      let stops: Stop[]
+      if (poisForOverride.length > 0) {
+        // Override coords index-by-index (belt-and-suspenders)
+        const overridden = (result.stops as Stop[]).map((s, i) =>
+          poisForOverride[i] ? { ...s, lat: poisForOverride[i].lat, lon: poisForOverride[i].lon } : s
+        )
+        stops = normalizeStops(overridden, lat, lon)
+      } else {
+        const geocoded = await geocodeAllStops(result.stops as Stop[], input.locationName)
+        stops = normalizeStops(geocoded, lat, lon)
+      }
 
       const newTrip: Trip = {
         id: crypto.randomUUID(),
@@ -198,16 +231,50 @@ export default function Home() {
   async function handleGenerateDest(input: TripInput) {
     if (!input.destination.trim()) return
 
-    const prompt = buildFlow2Prompt(input, t.groqLang)
-    setLastPrompt(prompt)
     setCurrentState('loading')
     setLoadingMessage(t.loadingMessages[0])
     setError(null)
 
     try {
+      let prompt: string
+      let poisForOverride: { lat: number; lon: number }[] = []
+
+      if (input.lat !== null && input.lon !== null) {
+        // OTM path: fetch real POIs
+        setLoadingMessage(t.loadingMessages[1]) // "Finding real places..."
+        const kinds = styleToKinds(input.styles)
+        const radius = radiusByDuration(input.duration)
+        const rate = input.duration <= 3 ? 3 : 2
+        const stopsCount = Math.min(Math.max(input.duration, 4), 12)
+        const rawPois = await fetchPOIs(input.lat, input.lon, radius, kinds, stopsCount * 3, rate)
+        const pois = deduplicatePOIs(rawPois).slice(0, stopsCount)
+
+        if (pois.length > 0) {
+          poisForOverride = pois.map((p) => ({ lat: p.lat, lon: p.lon }))
+          setLoadingMessage(t.loadingMessages[2]) // "Generating descriptions..."
+          prompt = buildOTMFlow2Prompt(input, pois, t.groqLang)
+        } else {
+          // OTM returned nothing — fall back to Groq-only
+          prompt = buildFlow2Prompt(input, t.groqLang)
+        }
+      } else {
+        // No coords — Groq-only path
+        prompt = buildFlow2Prompt(input, t.groqLang)
+      }
+
+      setLastPrompt(prompt)
       const result = await generateTrip(prompt)
-      const geocoded = await geocodeAllStops(result.stops as Stop[], input.destination)
-      const stops = normalizeDestStops(geocoded)
+
+      let stops: Stop[]
+      if (poisForOverride.length > 0) {
+        const overridden = (result.stops as Stop[]).map((s, i) =>
+          poisForOverride[i] ? { ...s, lat: poisForOverride[i].lat, lon: poisForOverride[i].lon } : s
+        )
+        stops = normalizeDestStops(overridden)
+      } else {
+        const geocoded = await geocodeAllStops(result.stops as Stop[], input.destination)
+        stops = normalizeDestStops(geocoded)
+      }
 
       const newTrip: Trip = {
         id: crypto.randomUUID(),

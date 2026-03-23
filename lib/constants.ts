@@ -102,7 +102,8 @@ export const STOPS_COUNT_OPTIONS = [3, 5, 7, 10]
 
 export const LOADING_MESSAGES = [
   'Finding top destinations...',
-  'Verifying coordinates...',
+  'Finding real places...',
+  'Generating descriptions...',
   'Sorting by distance...',
   'Building your route...',
   'Almost ready...',
