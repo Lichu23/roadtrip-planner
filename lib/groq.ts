@@ -1,4 +1,5 @@
 import { TripResult, TripInput } from './constants'
+import { OTMPlace } from './opentripmap'
 
 const PRIMARY_MODEL = 'llama-3.3-70b-versatile'
 const FALLBACK_MODEL = 'llama-3.1-8b-instant'
@@ -112,6 +113,113 @@ JSON structure:
   "stops": [
     {
       "name": "string",
+      "type": "string — ${typeExamples(lang, 'dest')}",
+      "description": "string — exactly 2 sentences, specific and informative",
+      "lat": number,
+      "lon": number,
+      "suggestedDays": number,
+      "highlights": ["string", "string", "string"],
+      "bestFor": "string",
+      "practicalInfo": {
+        "entranceFee": "string",
+        "bestTime": "string",
+        "tip": "string — one practical sentence"
+      }
+    }
+  ]
+}`
+}
+
+export function buildOTMFlow1Prompt(input: TripInput, pois: OTMPlace[], lang = 'English'): string {
+  const { locationName, duration, stopsCount, styles, transport, notes } = input
+  const count = pois.length
+  const poiList = pois.map((p, i) => `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})`).join('\n')
+  return `You are a travel writing assistant. You have been given a list of real verified tourist attractions near ${locationName}. Your job is to write engaging descriptions for each place.
+
+User's starting location: ${locationName}
+Trip duration: ${duration} day${duration > 1 ? 's' : ''}
+Number of stops: ${stopsCount}
+Travel styles: ${styles.join(', ')}
+Transport: ${transport}
+Notes: ${notes || 'none'}
+
+Here are the ${count} confirmed real places (with verified GPS coordinates):
+${poiList}
+
+Return ONLY a valid JSON object. No explanation, no markdown, no extra text.
+
+CRITICAL RULES:
+- Return EXACTLY ${count} stops, one per POI above, in the SAME ORDER
+- Copy the lat and lon values EXACTLY as given above — do NOT change or invent coordinates
+- Write the title, type, description, highlights, and practical info in ${lang}
+- Stop names must stay in their official local language
+- suggestedDays MUST be exactly one of: 0.5, 1, 1.5, or 2 — total should approximately equal ${duration}
+- highlights: exactly 2-3 short items
+- bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
+- practicalInfo.bestTime: must be one of: ${bestTimeOptions(lang)}
+- totalKm: realistic total driving/travel distance in km
+
+JSON structure:
+{
+  "title": "string — engaging trip title",
+  "totalKm": number,
+  "stops": [
+    {
+      "name": "string — official local-language name",
+      "type": "string — ${typeExamples(lang, 'gps')}",
+      "description": "string — exactly 2 sentences, specific and informative",
+      "lat": number,
+      "lon": number,
+      "suggestedDays": number,
+      "highlights": ["string", "string", "string"],
+      "bestFor": "string",
+      "practicalInfo": {
+        "entranceFee": "string — specific if known, otherwise ${feeExamples(lang)}",
+        "bestTime": "string",
+        "tip": "string — one practical sentence a visitor would appreciate"
+      }
+    }
+  ]
+}`
+}
+
+export function buildOTMFlow2Prompt(input: TripInput, pois: OTMPlace[], lang = 'English'): string {
+  const { destination, duration, styles, transport, notes } = input
+  const count = pois.length
+  const poiList = pois.map((p, i) => `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})`).join('\n')
+  return `You are a travel writing assistant. You have been given a list of real verified tourist destinations in/near ${destination}. Your job is to write engaging descriptions for each place.
+
+Destination: ${destination}
+Trip duration: ${duration} days
+Travel styles: ${styles.join(', ')}
+Transport: ${transport}
+Notes: ${notes || 'none'}
+
+Here are the ${count} confirmed real places (with verified GPS coordinates):
+${poiList}
+
+Return ONLY a valid JSON object. No explanation, no markdown, no extra text.
+
+CRITICAL RULES:
+- Return EXACTLY ${count} stops, one per POI above, in the SAME ORDER
+- Copy the lat and lon values EXACTLY as given above — do NOT change or invent coordinates
+- The first stop in the list is treated as the entry point — write entryPointReason explaining why it's a logical starting point
+- Write the title, type, description, highlights, and practical info in ${lang}
+- Stop names must stay in their official local language
+- suggestedDays MUST be exactly one of: 0.5, 1, 1.5, or 2 — total should approximately equal ${duration}
+- highlights: exactly 2-3 short items
+- bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
+- practicalInfo.bestTime: must be one of: ${bestTimeOptions(lang)}
+- totalKm: realistic total driving distance for the full chain route in km
+
+JSON structure:
+{
+  "title": "string — engaging trip title",
+  "totalKm": number,
+  "entryPointReason": "string — one sentence explaining why the first stop is a logical entry point",
+  "stops": [
+    {
+      "name": "string — official local-language name",
       "type": "string — ${typeExamples(lang, 'dest')}",
       "description": "string — exactly 2 sentences, specific and informative",
       "lat": number,

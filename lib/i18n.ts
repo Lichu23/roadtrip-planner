@@ -82,7 +82,8 @@ const en = {
   // Loading messages
   loadingMessages: [
     'Finding top destinations...',
-    'Verifying coordinates...',
+    'Finding real places...',
+    'Generating descriptions...',
     'Sorting by distance...',
     'Building your route...',
     'Almost ready...',
@@ -195,7 +196,8 @@ const es: typeof en = {
   // Loading messages
   loadingMessages: [
     'Encontrando los mejores destinos...',
-    'Verificando coordenadas...',
+    'Buscando lugares reales...',
+    'Generando descripciones...',
     'Ordenando por distancia...',
     'Construyendo tu ruta...',
     'Casi listo...',
