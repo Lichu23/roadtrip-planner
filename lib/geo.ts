@@ -1,5 +1,59 @@
 import { Stop } from './constants'
 
+const NOMINATIM_DELAY_MS = 1100
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export async function geocodeStopName(
+  name: string,
+  contextHint: string
+): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const query = encodeURIComponent(`${name} ${contextHint}`.trim())
+    const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'RoadtripPlanner/1.0' },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data.length) return null
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) }
+  } catch {
+    return null
+  }
+}
+
+const MAX_GEOCODE_DRIFT_KM = 50
+
+export async function geocodeAllStops(stops: Stop[], contextHint: string): Promise<Stop[]> {
+  const result: Stop[] = []
+  const usedCoords = new Set<string>()
+
+  for (let i = 0; i < stops.length; i++) {
+    if (i > 0) await sleep(NOMINATIM_DELAY_MS)
+    const stop = stops[i]
+    const coords = await geocodeStopName(stop.name, contextHint)
+
+    const isClose =
+      coords !== null &&
+      haversine(stop.lat, stop.lon, coords.lat, coords.lon) <= MAX_GEOCODE_DRIFT_KM
+
+    const chosen = isClose ? coords : { lat: stop.lat, lon: stop.lon }
+    const key = `${chosen.lat.toFixed(4)},${chosen.lon.toFixed(4)}`
+
+    if (!usedCoords.has(key)) {
+      usedCoords.add(key)
+      result.push({ ...stop, lat: chosen.lat, lon: chosen.lon })
+    } else {
+      // Duplicate coords — keep original Groq coords as-is
+      result.push(stop)
+    }
+  }
+  return result
+}
+
 export function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
   const toRad = (x: number) => (x * Math.PI) / 180

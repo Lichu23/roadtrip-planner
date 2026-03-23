@@ -1,5 +1,6 @@
 import { Trip, TRANSPORT_MODES } from '@/lib/constants'
-import { buildGoogleMapsURL, buildDayGroupURLs } from '@/lib/maps'
+import { T } from '@/lib/i18n'
+import { buildGoogleMapsURL, buildDayGroupURLs, buildOSRMUrl } from '@/lib/maps'
 import { encodeTripToURL } from '@/lib/sharing'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,9 +9,10 @@ import { toast } from 'sonner'
 
 interface ActionBarProps {
   trip: Trip
+  t: T
 }
 
-export default function ActionBar({ trip }: ActionBarProps) {
+export default function ActionBar({ trip, t }: ActionBarProps) {
   const shareUrl = encodeTripToURL(trip)
 
   function handleCopy() {
@@ -29,9 +31,7 @@ export default function ActionBar({ trip }: ActionBarProps) {
     ? buildGoogleMapsURL(stops, lat, lon, gmapsMode)
     : buildGoogleMapsURL(stops, null, null, gmapsMode)
 
-  const osmUrl = stops.length > 0
-    ? `https://www.openstreetmap.org/#map=10/${stops[0].lat}/${stops[0].lon}`
-    : 'https://www.openstreetmap.org'
+  const osmUrl = buildOSRMUrl(stops, isGPS ? lat : null, isGPS ? lon : null)
 
   const dayGroupUrls = !isGPS && stops.length > 5
     ? buildDayGroupURLs(stops, gmapsMode)
@@ -46,7 +46,7 @@ export default function ActionBar({ trip }: ActionBarProps) {
         disabled={!mapsUrl}
       >
         <Map className="w-4 h-4 mr-2" />
-        Open full route in Google Maps
+        {t.openGoogleMaps}
       </Button>
 
       {/* Per-day route buttons (destination flow, >5 stops) */}
@@ -58,7 +58,7 @@ export default function ActionBar({ trip }: ActionBarProps) {
           onClick={() => window.open(url, '_blank')}
         >
           <Map className="w-3.5 h-3.5 mr-2" />
-          {label} route
+          {t.dayRoute(label)}
         </Button>
       ))}
 
@@ -69,7 +69,7 @@ export default function ActionBar({ trip }: ActionBarProps) {
         onClick={() => window.open(osmUrl, '_blank')}
       >
         <ExternalLink className="w-3.5 h-3.5 mr-2" />
-        Open in OpenStreetMap
+        {t.openOSM}
       </Button>
 
       {/* Share row */}
@@ -81,7 +81,7 @@ export default function ActionBar({ trip }: ActionBarProps) {
         />
         <Button variant="outline" size="sm" onClick={handleCopy} className="shrink-0">
           <Copy className="w-3.5 h-3.5 mr-1.5" />
-          Copy
+          {t.copy}
         </Button>
       </div>
     </div>

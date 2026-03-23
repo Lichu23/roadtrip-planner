@@ -5,7 +5,26 @@ const FALLBACK_MODEL = 'llama-3.1-8b-instant'
 
 // ─── Prompts ──────────────────────────────────────────────────────────────────
 
-export function buildFlow1Prompt(input: TripInput): string {
+function bestTimeOptions(lang: string) {
+  return lang === 'Spanish' ? 'Mañana, Tarde, Día completo' : 'Morning, Afternoon, Full day'
+}
+
+function feeExamples(lang: string) {
+  return lang === 'Spanish' ? 'Gratis o Varía' : 'Free or Varies'
+}
+
+function typeExamples(lang: string, flow: 'gps' | 'dest') {
+  if (lang === 'Spanish') {
+    return flow === 'gps'
+      ? 'Catedral / Museo / Playa / Pueblo / Parque / etc'
+      : 'Ciudad / Pueblo de montaña / Aldea / Playa / Parque / etc'
+  }
+  return flow === 'gps'
+    ? 'Cathedral / Museum / Beach / Village / Park / etc'
+    : 'City / Hill Town / Village / Beach / Park / etc'
+}
+
+export function buildFlow1Prompt(input: TripInput, lang = 'English'): string {
   const { locationName, lat, lon, duration, stopsCount, styles, transport, notes } = input
   const count = stopsCount ?? 5
   return `You are a travel planning assistant. Generate a road trip itinerary.
@@ -26,10 +45,12 @@ Rules:
 - For 2+ days: stops can extend up to 150km from start
 - Each stop must have real, accurate GPS coordinates
 - Coordinates must match the actual real-world location of each stop
+- IMPORTANT: Always use the official local-language name for each stop (e.g. "Catedral de San Salvador" not "Oviedo Cathedral", "Museo del Prado" not "Prado Museum"). This is required for geocoding accuracy.
+- Write the title, type, description, highlights, and practical info in ${lang}. Stop names must stay in their official local language.
 - suggestedDays MUST be exactly one of: 0.5, 1, 1.5, or 2 — no other values allowed, must sum to approximately ${duration}
 - highlights: exactly 2-3 short items
 - bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
-- practicalInfo.bestTime: must be one of: Morning, Afternoon, Full day
+- practicalInfo.bestTime: must be one of: ${bestTimeOptions(lang)}
 - totalKm: realistic total driving/travel distance in km
 
 JSON structure:
@@ -39,7 +60,7 @@ JSON structure:
   "stops": [
     {
       "name": "string",
-      "type": "string — Cathedral / Museum / Beach / Village / Park / etc",
+      "type": "string — ${typeExamples(lang, 'gps')}",
       "description": "string — exactly 2 sentences, specific and informative",
       "lat": number,
       "lon": number,
@@ -47,7 +68,7 @@ JSON structure:
       "highlights": ["string", "string", "string"],
       "bestFor": "string",
       "practicalInfo": {
-        "entranceFee": "string — specific if known, otherwise Free or Varies",
+        "entranceFee": "string — specific if known, otherwise ${feeExamples(lang)}",
         "bestTime": "string",
         "tip": "string — one practical sentence a visitor would appreciate"
       }
@@ -56,7 +77,7 @@ JSON structure:
 }`
 }
 
-export function buildFlow2Prompt(input: TripInput): string {
+export function buildFlow2Prompt(input: TripInput, lang = 'English'): string {
   const { destination, duration, styles, transport, notes } = input
   return `You are a travel planning assistant. Generate a road trip itinerary.
 
@@ -75,10 +96,12 @@ Rules:
 - Do NOT sort stops — return them in any order. The app will sort them using nearest-neighbor algorithm.
 - Each stop must have real, accurate GPS coordinates
 - Coordinates must match the actual real-world location of each stop
+- IMPORTANT: Always use the official local-language name for each stop (e.g. "Firenze" not "Florence", "Duomo di Milano" not "Milan Cathedral", "Catedral de Sevilla" not "Seville Cathedral"). This is required for geocoding accuracy.
+- Write the title, type, description, highlights, and practical info in ${lang}. Stop names must stay in their official local language.
 - suggestedDays MUST be exactly one of: 0.5, 1, 1.5, or 2 — no other values allowed, total should approximately equal ${duration}
 - highlights: exactly 2-3 short items
 - bestFor: must be one of: culture, nature, food, adventure, beaches, architecture, hidden
-- practicalInfo.bestTime: must be one of: Morning, Afternoon, Full day
+- practicalInfo.bestTime: must be one of: ${bestTimeOptions(lang)}
 - totalKm: realistic total driving distance for the full chain route in km
 
 JSON structure:
@@ -89,7 +112,7 @@ JSON structure:
   "stops": [
     {
       "name": "string",
-      "type": "string — City / Hill Town / Village / Beach / Park / etc",
+      "type": "string — ${typeExamples(lang, 'dest')}",
       "description": "string — exactly 2 sentences, specific and informative",
       "lat": number,
       "lon": number,

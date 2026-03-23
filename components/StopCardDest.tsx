@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { ChevronDown, Navigation } from 'lucide-react'
+import { T } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
@@ -12,9 +13,10 @@ interface StopCardDestProps {
   stop: Stop
   isFirst: boolean
   isLast: boolean
+  t: T
 }
 
-export default function StopCardDest({ stop, isFirst, isLast }: StopCardDestProps) {
+export default function StopCardDest({ stop, isFirst, isLast, t }: StopCardDestProps) {
   const [open, setOpen] = useState(false)
 
   function openMaps() {
@@ -37,10 +39,10 @@ export default function StopCardDest({ stop, isFirst, isLast }: StopCardDestProp
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-slate-900 leading-tight">{stop.name}</p>
                 {isFirst && (
-                  <span className="text-xs text-emerald-600 font-medium">Route start</span>
+                  <span className="text-xs text-emerald-600 font-medium">{t.routeStart}</span>
                 )}
                 {isLast && (
-                  <span className="text-xs text-slate-400">Route end</span>
+                  <span className="text-xs text-slate-400">{t.routeEnd}</span>
                 )}
               </div>
             </div>
@@ -53,8 +55,8 @@ export default function StopCardDest({ stop, isFirst, isLast }: StopCardDestProp
 
           {/* Type + time */}
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-xs">{stop.type}</Badge>
-            <span className="text-xs text-slate-400">Suggested time: {stop.suggestedDaysLabel}</span>
+            <Badge variant="secondary" className="text-xs">{t.typeLabels[stop.type] ?? stop.type}</Badge>
+            <span className="text-xs text-slate-400">{t.suggestedTime}: {stop.suggestedDaysLabel}</span>
           </div>
 
           {/* Description */}
@@ -84,12 +86,12 @@ export default function StopCardDest({ stop, isFirst, isLast }: StopCardDestProp
               <Separator className="mb-3" />
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Entrance fee</span>
-                  <span className="text-slate-700 font-medium">{stop.practicalInfo.entranceFee}</span>
+                  <span className="text-slate-500">{t.entranceFee}</span>
+                  <span className="text-slate-700 font-medium">{t.entranceFeeLabels[stop.practicalInfo.entranceFee] ?? stop.practicalInfo.entranceFee}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Best time</span>
-                  <span className="text-slate-700 font-medium">{stop.practicalInfo.bestTime}</span>
+                  <span className="text-slate-500">{t.bestTime}</span>
+                  <span className="text-slate-700 font-medium">{t.bestTimeLabels[stop.practicalInfo.bestTime] ?? stop.practicalInfo.bestTime}</span>
                 </div>
                 <p className="text-slate-400 italic mt-2 leading-relaxed">{stop.practicalInfo.tip}</p>
                 <Button
@@ -99,7 +101,7 @@ export default function StopCardDest({ stop, isFirst, isLast }: StopCardDestProp
                   onClick={openMaps}
                 >
                   <Navigation className="w-3 h-3 mr-1.5" />
-                  Navigate here
+                  {t.navigateHere}
                 </Button>
               </div>
             </CollapsibleContent>

@@ -1,5 +1,6 @@
 import { MapPin } from 'lucide-react'
 import { HistoryEntry } from '@/lib/constants'
+import { T } from '@/lib/i18n'
 import {
   Drawer,
   DrawerContent,
@@ -18,6 +19,7 @@ interface HistoryDrawerProps {
   history: HistoryEntry[]
   onLoad: (entry: HistoryEntry) => void
   onClear: () => void
+  t: T
 }
 
 export default function HistoryDrawer({
@@ -26,12 +28,13 @@ export default function HistoryDrawer({
   history,
   onLoad,
   onClear,
+  t,
 }: HistoryDrawerProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
       <DrawerContent className="flex flex-col h-full max-w-sm">
         <DrawerHeader className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <DrawerTitle>Search history</DrawerTitle>
+          <DrawerTitle>{t.searchHistory}</DrawerTitle>
           <DrawerClose asChild>
             <Button variant="ghost" size="icon-sm" className="text-slate-400 hover:text-slate-700">
               ✕
@@ -43,9 +46,9 @@ export default function HistoryDrawer({
           <div className="flex-1 flex items-center justify-center px-4">
             <div className="text-center">
               <MapPin className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-500">No trips yet</p>
+              <p className="text-sm font-medium text-slate-500">{t.noTripsYet}</p>
               <p className="text-xs text-slate-400 mt-1">
-                Your generated trips will appear here
+                {t.noTripsDesc}
               </p>
             </div>
           </div>
@@ -59,14 +62,14 @@ export default function HistoryDrawer({
                       {entry.locationLabel}
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      {entry.stopsCount} stops · {entry.duration} days
+                      {t.stopsAndDays(entry.stopsCount, entry.duration)}
                     </p>
                     <Badge variant="outline" className="text-xs mt-1">
-                      {entry.flow === 'gps' ? 'GPS trip' : 'Destination trip'}
+                      {entry.flow === 'gps' ? t.gpsTrip : t.destinationTrip}
                     </Badge>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => onLoad(entry)}>
-                    Load
+                    {t.load}
                   </Button>
                 </div>
                 <Separator />
@@ -83,7 +86,7 @@ export default function HistoryDrawer({
               className="text-slate-400 hover:text-red-500"
               onClick={onClear}
             >
-              Clear all
+              {t.clearAll}
             </Button>
           </DrawerFooter>
         )}

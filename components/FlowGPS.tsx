@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { Navigation, MapPin, AlertCircle, Loader2 } from 'lucide-react'
+import { T } from '@/lib/i18n'
 
 type GpsStatus = 'idle' | 'requesting' | 'success' | 'error'
 
@@ -36,9 +37,10 @@ interface FlowGPSProps {
   formData: TripInput
   onFormChange: (data: TripInput) => void
   onGenerate: () => void
+  t: T
 }
 
-export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSProps) {
+export default function FlowGPS({ formData, onFormChange, onGenerate, t }: FlowGPSProps) {
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('idle')
   const [geocoding, setGeocoding] = useState(false)
   const addressRef = useRef<HTMLInputElement>(null)
@@ -135,13 +137,13 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
     idle: (
       <>
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2 shrink-0" />
-        Use my GPS
+        {t.useMyGPS}
       </>
     ),
     requesting: (
       <>
         <Loader2 className="w-4 h-4 mr-2 animate-spin text-orange-500" />
-        Detecting...
+        {t.detecting}
       </>
     ),
     success: (
@@ -153,7 +155,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
     error: (
       <>
         <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
-        Location unavailable — enter address below
+        {t.locationUnavailable}
       </>
     ),
   }
@@ -162,7 +164,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
     <div className="space-y-5">
       {/* Location */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Your location</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.yourLocation}</Label>
         <Button
           variant="outline"
           className={cn(
@@ -187,7 +189,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
         <div className="relative">
           <Input
             ref={addressRef}
-            placeholder="Or enter a street address"
+            placeholder={t.orEnterAddress}
             value={gpsStatus === 'success' ? '' : formData.locationName}
             onChange={(e) => {
               setGpsStatus('idle')
@@ -205,7 +207,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
 
       {/* Stops count */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Number of stops</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.numberOfStops}</Label>
         <div className="flex flex-wrap gap-2">
           {STOPS_COUNT_OPTIONS.map((count) => (
             <Button
@@ -219,7 +221,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {count} stops
+              {t.stopsLabel(count)}
             </Button>
           ))}
         </div>
@@ -227,7 +229,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
 
       {/* Duration */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Duration</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.duration}</Label>
         <div className="flex flex-wrap gap-2">
           {DURATION_OPTIONS.gps.map((days) => (
             <Button
@@ -241,7 +243,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {days === 1 ? '1 day' : `${days} days`}
+              {t.dayLabel(days)}
             </Button>
           ))}
         </div>
@@ -249,9 +251,9 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
 
       {/* Travel styles */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Travel style</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.travelStyle}</Label>
         <div className="flex flex-wrap gap-2">
-          {TRAVEL_STYLES.map(({ value, label }) => (
+          {TRAVEL_STYLES.map(({ value }) => (
             <Button
               key={value}
               variant={formData.styles.includes(value) ? 'default' : 'outline'}
@@ -263,7 +265,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {label}
+              {t.travelStyles[value]}
             </Button>
           ))}
         </div>
@@ -271,9 +273,9 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
 
       {/* Transport */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Transport</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.transport}</Label>
         <div className="flex flex-wrap gap-2">
-          {TRANSPORT_MODES.map(({ value, label }) => (
+          {TRANSPORT_MODES.map(({ value }) => (
             <Button
               key={value}
               variant={formData.transport === value ? 'default' : 'outline'}
@@ -285,7 +287,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {label}
+              {t.transportModes[value]}
             </Button>
           ))}
         </div>
@@ -298,7 +300,7 @@ export default function FlowGPS({ formData, onFormChange, onGenerate }: FlowGPSP
         disabled={!canGenerate}
       >
         <Navigation className="w-4 h-4 mr-2" />
-        Generate road trip
+        {t.generateRoadtrip}
       </Button>
     </div>
   )

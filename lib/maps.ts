@@ -29,3 +29,13 @@ export function buildDayGroupURLs(stops: Stop[], travelMode = 'driving'): DayGro
 export function buildSingleStopURL(lat: number, lon: number): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`
 }
+
+export function buildOSRMUrl(stops: Stop[], originLat: number | null, originLon: number | null): string {
+  if (stops.length === 0) return 'https://www.openstreetmap.org'
+  const waypoints: { lat: number; lon: number }[] = []
+  if (originLat != null && originLon != null) waypoints.push({ lat: originLat, lon: originLon })
+  waypoints.push(...stops.map((s) => ({ lat: s.lat, lon: s.lon })))
+  const locParams = waypoints.map((w) => `loc=${w.lat}%2C${w.lon}`).join('&')
+  const center = waypoints[Math.floor(waypoints.length / 2)]
+  return `https://map.project-osrm.org/?z=8&center=${center.lat}%2C${center.lon}&${locParams}&hl=en&alt=0&srv=0`
+}
