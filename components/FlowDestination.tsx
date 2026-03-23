@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { Map, Loader2 } from 'lucide-react'
+import { T } from '@/lib/i18n'
 
 interface NominatimSearchResult {
   lat: string
@@ -16,9 +17,10 @@ interface FlowDestinationProps {
   formData: TripInput
   onFormChange: (data: TripInput) => void
   onGenerate: () => void
+  t: T
 }
 
-export default function FlowDestination({ formData, onFormChange, onGenerate }: FlowDestinationProps) {
+export default function FlowDestination({ formData, onFormChange, onGenerate, t }: FlowDestinationProps) {
   const [geocoding, setGeocoding] = useState(false)
 
   async function geocodeDestination(destination: string) {
@@ -60,10 +62,10 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
     <div className="space-y-5">
       {/* Destination */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Destination</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.flowDestTitle}</Label>
         <div className="relative">
           <Input
-            placeholder="e.g. Tuscany, Italy or Kyoto, Japan"
+            placeholder={t.destinationPlaceholder}
             value={formData.destination}
             onChange={(e) => onFormChange({ ...formData, destination: e.target.value, lat: null, lon: null })}
             onBlur={(e) => geocodeDestination(e.target.value)}
@@ -77,7 +79,7 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
 
       {/* Duration */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Duration</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.duration}</Label>
         <div className="flex flex-wrap gap-2">
           {DURATION_OPTIONS.destination.map((days) => (
             <Button
@@ -91,7 +93,7 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {days} days
+              {t.dayLabel(days)}
             </Button>
           ))}
         </div>
@@ -99,9 +101,9 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
 
       {/* Travel styles */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Travel style</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.travelStyle}</Label>
         <div className="flex flex-wrap gap-2">
-          {TRAVEL_STYLES.map(({ value, label }) => (
+          {TRAVEL_STYLES.map(({ value }) => (
             <Button
               key={value}
               variant={formData.styles.includes(value) ? 'default' : 'outline'}
@@ -113,7 +115,7 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {label}
+              {t.travelStyles[value]}
             </Button>
           ))}
         </div>
@@ -121,9 +123,9 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
 
       {/* Transport */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">Transport</Label>
+        <Label className="text-sm font-medium text-slate-700">{t.transport}</Label>
         <div className="flex flex-wrap gap-2">
-          {TRANSPORT_MODES.map(({ value, label }) => (
+          {TRANSPORT_MODES.map(({ value }) => (
             <Button
               key={value}
               variant={formData.transport === value ? 'default' : 'outline'}
@@ -135,7 +137,7 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
                   'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
               )}
             >
-              {label}
+              {t.transportModes[value]}
             </Button>
           ))}
         </div>
@@ -143,11 +145,9 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
 
       {/* Notes */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">
-          Notes <span className="text-slate-400 font-normal">(optional)</span>
-        </Label>
+        <Label className="text-sm font-medium text-slate-700">{t.notesOptional}</Label>
         <Textarea
-          placeholder="e.g. travelling with kids, vegetarian food only, no hiking..."
+          placeholder={t.notesPlaceholder}
           value={formData.notes}
           onChange={(e) => onFormChange({ ...formData, notes: e.target.value })}
           rows={3}
@@ -161,7 +161,7 @@ export default function FlowDestination({ formData, onFormChange, onGenerate }: 
         disabled={!canGenerate}
       >
         <Map className="w-4 h-4 mr-2" />
-        Generate road trip
+        {t.generateRoadtrip}
       </Button>
     </div>
   )

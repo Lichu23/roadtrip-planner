@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible'
 import { ChevronDown, Navigation, MapPin, Clock } from 'lucide-react'
+import { T } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
@@ -11,9 +12,10 @@ interface StopCardGPSProps {
   stop: Stop
   isFirst: boolean
   onVisitedChange: (id: number, visited: boolean) => void
+  t: T
 }
 
-export default function StopCardGPS({ stop, isFirst, onVisitedChange }: StopCardGPSProps) {
+export default function StopCardGPS({ stop, isFirst, onVisitedChange, t }: StopCardGPSProps) {
   const [open, setOpen] = useState(false)
 
   function openMaps() {
@@ -50,7 +52,7 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange }: StopCard
             )}>
               {stop.name}
             </p>
-            <p className="text-sm text-emerald-600 font-medium mt-0.5">{stop.type}</p>
+            <p className="text-sm text-emerald-600 font-medium mt-0.5">{t.typeLabels[stop.type] ?? stop.type}</p>
           </div>
 
           {/* Visited + chevron */}
@@ -66,7 +68,7 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange }: StopCard
                 htmlFor={`visited-${stop.id}`}
                 className="text-xs text-slate-500 cursor-pointer select-none"
               >
-                Visited
+                {t.visited}
               </Label>
             </div>
 
@@ -90,12 +92,12 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange }: StopCard
           {isFirst && (
             <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
               <MapPin className="w-3.5 h-3.5" />
-              Starting point
+              {t.startingPoint}
             </span>
           )}
           <span className="flex items-center gap-1 text-xs text-slate-400">
             <Clock className="w-3.5 h-3.5" />
-            Suggested time: {stop.suggestedDaysLabel}
+            {t.suggestedTime}: {stop.suggestedDaysLabel}
           </span>
         </div>
       </div>
@@ -105,14 +107,14 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange }: StopCard
         <CollapsibleContent>
           <div className="border-t border-slate-100 px-4 py-4 bg-slate-50/60">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Practical info
+              {t.practicalInfo}
             </p>
             <div className="flex items-center gap-6 text-sm mb-3">
               <span className="text-slate-600">
-                Entrance: <span className="font-semibold text-slate-800">{stop.practicalInfo.entranceFee}</span>
+                {t.entrance}: <span className="font-semibold text-slate-800">{t.entranceFeeLabels[stop.practicalInfo.entranceFee] ?? stop.practicalInfo.entranceFee}</span>
               </span>
               <span className="text-slate-600">
-                Best time: <span className="font-semibold text-slate-800">{stop.practicalInfo.bestTime}</span>
+                {t.bestTime}: <span className="font-semibold text-slate-800">{t.bestTimeLabels[stop.practicalInfo.bestTime] ?? stop.practicalInfo.bestTime}</span>
               </span>
             </div>
             <p className="text-sm text-slate-500 italic leading-relaxed mb-4">
@@ -125,7 +127,7 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange }: StopCard
               onClick={openMaps}
             >
               <Navigation className="w-3.5 h-3.5 mr-2" />
-              Navigate here
+              {t.navigateHere}
             </Button>
           </div>
         </CollapsibleContent>

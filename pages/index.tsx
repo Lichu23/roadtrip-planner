@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import TopBar from '@/components/TopBar'
 import HistoryDrawer from '@/components/HistoryDrawer'
 import IntakeScreen from '@/components/IntakeScreen'
@@ -12,10 +12,10 @@ import {
   HistoryEntry,
   Stop,
   DEFAULT_FORM_DATA,
-  LOADING_MESSAGES,
 } from '@/lib/constants'
+import { Lang, translations } from '@/lib/i18n'
 import { generateTrip, buildFlow1Prompt, buildFlow2Prompt } from '@/lib/groq'
-import { sortByNearest } from '@/lib/geo'
+import { sortByNearest, geocodeAllStops } from '@/lib/geo'
 import { formatDays } from '@/lib/format'
 import {
   saveCurrentTrip,
@@ -69,10 +69,32 @@ export default function Home() {
   const [formData, setFormData] = useState<TripInput>(DEFAULT_FORM_DATA)
   const [trip, setTrip] = useState<Trip | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [loadingMessage, setLoadingMessage] = useState(LOADING_MESSAGES[0])
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [lastPrompt, setLastPrompt] = useState<string>('')
+  const [lang, setLang] = useState<Lang>('en')
+  const [screenVisible, setScreenVisible] = useState(true)
+
+  const t = useMemo(() => translations[lang], [lang])
+  const [loadingMessage, setLoadingMessage] = useState(t.loadingMessages[0])
+
+  async function fadeToState(fn: () => void) {
+    setScreenVisible(false)
+    await new Promise((r) => setTimeout(r, 350))
+    fn()
+    setScreenVisible(true)
+  }
+
+  // ─── On mount: restore language ───────────────────────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem('roadtrip_lang') as Lang | null
+    if (saved === 'en' || saved === 'es') setLang(saved)
+  }, [])
+
+  function handleLangChange(next: Lang) {
+    setLang(next)
+    localStorage.setItem('roadtrip_lang', next)
+  }
 
   // ─── On mount: restore from URL hash or localStorage ─────────────────────
   useEffect(() => {
@@ -120,12 +142,14 @@ export default function Home() {
   useEffect(() => {
     if (currentState !== 'loading') return
     let i = 0
+    const messages = t.loadingMessages
+    setLoadingMessage(messages[0])
     const interval = setInterval(() => {
-      i = (i + 1) % LOADING_MESSAGES.length
-      setLoadingMessage(LOADING_MESSAGES[i])
+      i = (i + 1) % messages.length
+      setLoadingMessage(messages[i])
     }, 1500)
     return () => clearInterval(interval)
-  }, [currentState])
+  }, [currentState, t])
 
   // ─── GPS flow generate ───────────────────────────────────────────────────
 
@@ -138,15 +162,16 @@ export default function Home() {
     const lat = input.lat ?? 0
     const lon = input.lon ?? 0
 
-    const prompt = buildFlow1Prompt({ ...input, lat, lon })
+    const prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
     setLastPrompt(prompt)
     setCurrentState('loading')
-    setLoadingMessage(LOADING_MESSAGES[0])
+    setLoadingMessage(t.loadingMessages[0])
     setError(null)
 
     try {
       const result = await generateTrip(prompt)
-      const stops = normalizeStops(result.stops as Stop[], lat, lon)
+      const geocoded = await geocodeAllStops(result.stops as Stop[], input.locationName)
+      const stops = normalizeStops(geocoded, lat, lon)
 
       const newTrip: Trip = {
         id: crypto.randomUUID(),
@@ -158,8 +183,10 @@ export default function Home() {
 
       addToHistory(newTrip)
       setHistory(loadHistory())
-      setTrip(newTrip)
-      setCurrentState('results')
+      await fadeToState(() => {
+        setTrip(newTrip)
+        setCurrentState('results')
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setCurrentState('intake')
@@ -171,15 +198,16 @@ export default function Home() {
   async function handleGenerateDest(input: TripInput) {
     if (!input.destination.trim()) return
 
-    const prompt = buildFlow2Prompt(input)
+    const prompt = buildFlow2Prompt(input, t.groqLang)
     setLastPrompt(prompt)
     setCurrentState('loading')
-    setLoadingMessage(LOADING_MESSAGES[0])
+    setLoadingMessage(t.loadingMessages[0])
     setError(null)
 
     try {
       const result = await generateTrip(prompt)
-      const stops = normalizeDestStops(result.stops as Stop[])
+      const geocoded = await geocodeAllStops(result.stops as Stop[], input.destination)
+      const stops = normalizeDestStops(geocoded)
 
       const newTrip: Trip = {
         id: crypto.randomUUID(),
@@ -191,8 +219,10 @@ export default function Home() {
 
       addToHistory(newTrip)
       setHistory(loadHistory())
-      setTrip(newTrip)
-      setCurrentState('results')
+      await fadeToState(() => {
+        setTrip(newTrip)
+        setCurrentState('results')
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
       setCurrentState('intake')
@@ -282,7 +312,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <TopBar onHistoryOpen={() => setHistoryOpen(true)} />
+      <TopBar onHistoryOpen={() => setHistoryOpen(true)} lang={lang} onLangChange={handleLangChange} t={t} />
 
       <HistoryDrawer
         open={historyOpen}
@@ -290,7 +320,10 @@ export default function Home() {
         history={history}
         onLoad={handleLoadHistory}
         onClear={handleClearHistory}
+        t={t}
       />
+
+      <div className={`transition-opacity duration-300 ${screenVisible ? 'opacity-100' : 'opacity-0'}`}>
 
       {currentState === 'intake' && (
         <>
@@ -301,6 +334,7 @@ export default function Home() {
             onFormChange={setFormData}
             onGenerate={handleGenerate}
             onCancel={trip ? () => setCurrentState('results') : undefined}
+            t={t}
           />
           {error && (
             <div className="max-w-2xl mx-auto px-4 pb-6">
@@ -331,11 +365,12 @@ export default function Home() {
         <LoadingScreen
           label={
             currentFlow === 'gps'
-              ? formData.locationName || 'Your location'
-              : formData.destination || 'Your destination'
+              ? formData.locationName || t.yourLocation
+              : formData.destination || t.yourLocation
           }
           duration={formData.duration}
           message={loadingMessage}
+          t={t}
         />
       )}
 
@@ -346,8 +381,11 @@ export default function Home() {
           onRegenerate={handleRegenerate}
           onNewTrip={handleNewTrip}
           onVisitedChange={handleVisitedChange}
+          t={t}
         />
       )}
+
+      </div>
     </div>
   )
 }

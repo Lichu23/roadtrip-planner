@@ -1,4 +1,5 @@
 import { Trip } from '@/lib/constants'
+import { T } from '@/lib/i18n'
 import { groupStopsByDay } from '@/lib/format'
 import FilterBar from './FilterBar'
 import TripStats from './TripStats'
@@ -13,6 +14,7 @@ interface ResultsScreenProps {
   onRegenerate: () => void
   onNewTrip: () => void
   onVisitedChange: (id: number, visited: boolean) => void
+  t: T
 }
 
 export default function ResultsScreen({
@@ -21,6 +23,7 @@ export default function ResultsScreen({
   onRegenerate,
   onNewTrip,
   onVisitedChange,
+  t,
 }: ResultsScreenProps) {
   const { result, flow } = trip
   const stops = result.stops
@@ -36,7 +39,7 @@ export default function ResultsScreen({
       <div className="max-w-2xl mx-auto px-4 py-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
           {/* Filter bar */}
-          <FilterBar trip={trip} onEdit={onEdit} onRegenerate={onRegenerate} onNewTrip={onNewTrip} />
+          <FilterBar trip={trip} onEdit={onEdit} onRegenerate={onRegenerate} onNewTrip={onNewTrip} t={t} />
 
           {/* Trip title */}
           <div>
@@ -44,21 +47,21 @@ export default function ResultsScreen({
           </div>
 
           {/* Stats */}
-          <TripStats trip={trip} />
+          <TripStats trip={trip} t={t} />
 
           {/* GPS progress */}
           {isGPS && (
             <div className="space-y-2">
               {allVisited ? (
-                <p className="text-sm text-emerald-600 font-semibold">All stops visited ✓</p>
+                <p className="text-sm text-emerald-600 font-semibold">{t.allVisited}</p>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-500">
-                      {visitedCount} of {stops.length} visited
+                      {t.visitedProgress(visitedCount, stops.length)}
                     </span>
                     <span className="text-sm font-medium text-emerald-600">
-                      {remaining} {remaining === 1 ? 'stop' : 'stops'} remaining
+                      {t.stopsRemaining(remaining)}
                     </span>
                   </div>
                   <Progress
@@ -84,6 +87,7 @@ export default function ResultsScreen({
                   stop={stop}
                   isFirst={index === 0}
                   onVisitedChange={onVisitedChange}
+                  t={t}
                 />
               ))}
             </div>
@@ -92,7 +96,7 @@ export default function ResultsScreen({
               {groupStopsByDay(stops).map((group) => (
                 <div key={group[0].day}>
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                    Day {group[0].day}
+                    {t.dayHeader(group[0].day ?? 1)}
                   </p>
                   <div className="space-y-2">
                     {group.map((stop) => (
@@ -101,6 +105,7 @@ export default function ResultsScreen({
                         stop={stop}
                         isFirst={stop.id === 1}
                         isLast={stop.id === stops.length}
+                        t={t}
                       />
                     ))}
                   </div>
@@ -110,7 +115,7 @@ export default function ResultsScreen({
           )}
 
           {/* Action bar */}
-          <ActionBar trip={trip} />
+          <ActionBar trip={trip} t={t} />
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { Trip } from '@/lib/constants'
+import { T } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -18,9 +19,10 @@ interface FilterBarProps {
   onEdit: () => void
   onRegenerate: () => void
   onNewTrip: () => void
+  t: T
 }
 
-export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip }: FilterBarProps) {
+export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip, t }: FilterBarProps) {
   const { input, flow } = trip
   const label = flow === 'gps' ? input.locationName || 'Your location' : input.destination
 
@@ -38,7 +40,7 @@ export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip }: Fil
           className="text-slate-600 hover:text-slate-900 font-medium"
         >
           <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-          Reshuffle
+          {t.reshuffle}
         </Button>
         <Button
           variant="ghost"
@@ -47,7 +49,7 @@ export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip }: Fil
           className="text-slate-600 hover:text-slate-900 font-medium"
         >
           <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
-          Filters
+          {t.filters}
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -56,24 +58,21 @@ export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip }: Fil
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
             >
               <Home className="w-3.5 h-3.5 mr-1.5" />
-              New trip
+              {t.newTrip}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Start a new trip?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Your current trip will be cleared from the screen. Don&apos;t worry — it&apos;s
-                saved in your history and you can reload it anytime.
-              </AlertDialogDescription>
+              <AlertDialogTitle>{t.newTripTitle}</AlertDialogTitle>
+              <AlertDialogDescription>{t.newTripDesc}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={onNewTrip}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                Start new trip
+                {t.startNewTrip}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
