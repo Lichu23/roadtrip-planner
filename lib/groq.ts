@@ -131,7 +131,10 @@ JSON structure:
 export function buildOTMFlow1Prompt(input: TripInput, pois: OTMPlace[], lang = 'English'): string {
   const { locationName, duration, stopsCount, styles, notes } = input
   const count = pois.length
-  const poiList = pois.map((p, i) => `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})`).join('\n')
+  const poiList = pois.map((p, i) => {
+    const wiki = p.wikiExtract ? `\n   Background: ${p.wikiExtract}` : ''
+    return `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})${wiki}`
+  }).join('\n')
   return `You are a travel writing assistant. You have been given a list of real verified tourist attractions near ${locationName}. Your job is to write engaging descriptions for each place.
 
 User's starting location: ${locationName}
@@ -183,7 +186,10 @@ JSON structure:
 export function buildOTMFlow2Prompt(input: TripInput, pois: OTMPlace[], lang = 'English'): string {
   const { destination, duration, styles, notes } = input
   const count = pois.length
-  const poiList = pois.map((p, i) => `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})`).join('\n')
+  const poiList = pois.map((p, i) => {
+    const wiki = p.wikiExtract ? `\n   Background: ${p.wikiExtract}` : ''
+    return `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})${wiki}`
+  }).join('\n')
   return `You are a travel writing assistant. You have been given a list of real verified tourist destinations in/near ${destination}. Your job is to write engaging descriptions for each place.
 
 Destination: ${destination}

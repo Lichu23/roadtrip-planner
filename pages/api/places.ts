@@ -7,6 +7,49 @@ export interface OTMPlace {
   lon: number
   kinds: string
   dist: number
+  wikiExtract?: string
+}
+
+// ─── Wikipedia enrichment ─────────────────────────────────────────────────────
+
+async function fetchWikiExtract(name: string, lat: number, lon: number): Promise<string | null> {
+  try {
+    // Primary: geosearch within 500m of coordinates
+    const geoRes = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=geosearch` +
+      `&gsradius=500&gscoord=${lat}|${lon}&gslimit=1&format=json`
+    )
+    const geoData = await geoRes.json() as { query?: { geosearch?: { pageid: number }[] } }
+    const pageId = geoData.query?.geosearch?.[0]?.pageid
+
+    const targetId = pageId ?? await searchWikiByName(name)
+    if (!targetId) return null
+
+    const extRes = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&pageids=${targetId}` +
+      `&prop=extracts&exintro=1&explaintext=1&exsentences=3&format=json`
+    )
+    const extData = await extRes.json() as { query?: { pages?: Record<string, { extract?: string }> } }
+    const extract = extData.query?.pages?.[String(targetId)]?.extract ?? ''
+    return extract.trim() || null
+  } catch {
+    return null
+  }
+}
+
+async function searchWikiByName(name: string): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(name)}` +
+      `&prop=extracts&exintro=1&explaintext=1&exsentences=3&format=json`
+    )
+    const data = await res.json() as { query?: { pages?: Record<string, { pageid?: number }> } }
+    const pages = data.query?.pages ?? {}
+    const page = Object.values(pages)[0]
+    return page?.pageid && page.pageid !== -1 ? page.pageid : null
+  } catch {
+    return null
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -65,7 +108,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }))
       .filter((p) => p.name && p.name.trim() !== '' && p.lat !== 0 && p.lon !== 0)
 
-    return res.status(200).json(places)
+    // Enrich each POI with a Wikipedia extract in parallel
+    const enriched = await Promise.all(
+      places.map(async (p) => ({
+        ...p,
+        wikiExtract: (await fetchWikiExtract(p.name, p.lat, p.lon)) ?? undefined,
+      }))
+    )
+
+    return res.status(200).json(enriched)
   } catch {
     return res.status(500).json({ error: 'Failed to fetch places' })
   }
