@@ -110,7 +110,17 @@ const en = {
   // bestTime translation map (Groq returns English values; translate for display)
   bestTimeLabels: { Morning: 'Morning', Afternoon: 'Afternoon', 'Full day': 'Full day' } as Record<string, string>,
   entranceFeeLabels: { Free: 'Free', Varies: 'Varies' } as Record<string, string>,
-  typeLabels: {} as Record<string, string>,
+  // Spanish → English (for trips generated in ES mode, viewed in EN mode)
+  typeLabels: {
+    Catedral: 'Cathedral', Museo: 'Museum', Playa: 'Beach', Parque: 'Park',
+    Jardín: 'Garden', Plaza: 'Square', Pueblo: 'Village', Ciudad: 'City',
+    Mercado: 'Market', Palacio: 'Palace', Castillo: 'Castle',
+    Iglesia: 'Church', Monumento: 'Monument', Mirador: 'Viewpoint',
+    Puente: 'Bridge', Torre: 'Tower', Ruinas: 'Ruins', Puerto: 'Harbor',
+    Valle: 'Valley', Lago: 'Lake', Cascada: 'Waterfall', Bosque: 'Forest',
+    Montaña: 'Mountain', 'Pueblo de montaña': 'Hill Town', 'Reserva Natural': 'Nature Reserve',
+    'Casco Antiguo': 'Old Town', 'Sitio Histórico': 'Historic Site', Barrio: 'Neighborhood',
+  } as Record<string, string>,
 
   // Groq prompt language instruction
   groqLang: 'English',
