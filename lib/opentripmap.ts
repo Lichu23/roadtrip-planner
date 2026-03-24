@@ -7,6 +7,7 @@ export interface OTMPlace {
   lon: number
   kinds: string
   dist: number
+  wikiExtract?: string
 }
 
 const KINDS_MAP: Record<TravelStyle, string> = {
