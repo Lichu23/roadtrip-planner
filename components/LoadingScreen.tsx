@@ -34,16 +34,18 @@ export default function LoadingScreen({ label, duration, message, t }: LoadingSc
       <div className="flex items-center gap-2">
         {ICONS.map((Icon, i) => (
           <div key={i} className="flex items-center gap-2">
-            {/* Icon */}
-            <div className={cn(
-              'transition-all duration-700 flex items-center justify-center rounded-full',
-              i === activeIdx
-                ? 'w-14 h-14 bg-emerald-600 text-white shadow-lg shadow-emerald-200 scale-110'
-                : i < activeIdx
-                  ? 'w-10 h-10 bg-emerald-100 text-emerald-500'
-                  : 'w-10 h-10 bg-slate-100 text-slate-300'
-            )}>
-              <Icon className={cn('transition-all duration-700', i === activeIdx ? 'w-7 h-7' : 'w-5 h-5')} />
+            {/* Icon — fixed outer size keeps the row height stable */}
+            <div className="w-14 h-14 flex items-center justify-center">
+              <div className={cn(
+                'transition-all duration-700 flex items-center justify-center rounded-full',
+                i === activeIdx
+                  ? 'w-14 h-14 bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                  : i < activeIdx
+                    ? 'w-10 h-10 bg-emerald-100 text-emerald-500'
+                    : 'w-10 h-10 bg-slate-100 text-slate-300'
+              )}>
+                <Icon className={cn('transition-all duration-700', i === activeIdx ? 'w-7 h-7' : 'w-5 h-5')} />
+              </div>
             </div>
 
             {/* Connector dots */}
