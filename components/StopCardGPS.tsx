@@ -88,7 +88,7 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange, t }: StopC
         </p>
 
         {/* Footer: start label + time */}
-        <div className="flex items-center gap-4 mt-3 ml-12">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 ml-12">
           {isFirst && (
             <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium whitespace-nowrap">
               <MapPin className="w-3.5 h-3.5" />
