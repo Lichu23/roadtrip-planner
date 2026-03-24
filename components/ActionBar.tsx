@@ -1,4 +1,4 @@
-import { Trip, TRANSPORT_MODES } from '@/lib/constants'
+import { Trip } from '@/lib/constants'
 import { T } from '@/lib/i18n'
 import { buildGoogleMapsURL, buildDayGroupURLs, buildOSRMUrl } from '@/lib/maps'
 import { encodeTripToURL } from '@/lib/sharing'
@@ -22,19 +22,17 @@ export default function ActionBar({ trip, t }: ActionBarProps) {
   }
 
   const { stops } = trip.result
-  const { lat, lon, transport } = trip.input
+  const { lat, lon } = trip.input
   const isGPS = trip.flow === 'gps'
 
-  const gmapsMode = TRANSPORT_MODES.find((m) => m.value === transport)?.gmaps ?? 'driving'
-
   const mapsUrl = isGPS
-    ? buildGoogleMapsURL(stops, lat, lon, gmapsMode)
-    : buildGoogleMapsURL(stops, null, null, gmapsMode)
+    ? buildGoogleMapsURL(stops, lat, lon, 'driving')
+    : buildGoogleMapsURL(stops, null, null, 'driving')
 
   const osmUrl = buildOSRMUrl(stops, isGPS ? lat : null, isGPS ? lon : null)
 
   const dayGroupUrls = !isGPS && stops.length > 5
-    ? buildDayGroupURLs(stops, gmapsMode)
+    ? buildDayGroupURLs(stops, 'driving')
     : []
 
   return (

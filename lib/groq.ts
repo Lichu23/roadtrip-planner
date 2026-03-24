@@ -26,7 +26,7 @@ function typeExamples(lang: string, flow: 'gps' | 'dest') {
 }
 
 export function buildFlow1Prompt(input: TripInput, lang = 'English'): string {
-  const { locationName, lat, lon, duration, stopsCount, styles, transport, notes } = input
+  const { locationName, lat, lon, duration, stopsCount, styles, notes } = input
   const count = stopsCount ?? 5
   return `You are a travel planning assistant. Generate a road trip itinerary.
 
@@ -34,7 +34,6 @@ User's starting location: ${locationName} (coordinates: ${lat}, ${lon})
 Trip duration: ${duration} day${duration > 1 ? 's' : ''}
 Number of stops: ${count}
 Travel styles: ${styles.join(', ')}
-Transport: ${transport}
 Notes: ${notes || 'none'}
 
 Return ONLY a valid JSON object. No explanation, no markdown, no extra text.
@@ -79,13 +78,12 @@ JSON structure:
 }
 
 export function buildFlow2Prompt(input: TripInput, lang = 'English'): string {
-  const { destination, duration, styles, transport, notes } = input
+  const { destination, duration, styles, notes } = input
   return `You are a travel planning assistant. Generate a road trip itinerary.
 
 Destination: ${destination}
 Trip duration: ${duration} days
 Travel styles: ${styles.join(', ')}
-Transport: ${transport}
 Notes: ${notes || 'none'}
 
 Return ONLY a valid JSON object. No explanation, no markdown, no extra text.
@@ -131,7 +129,7 @@ JSON structure:
 }
 
 export function buildOTMFlow1Prompt(input: TripInput, pois: OTMPlace[], lang = 'English'): string {
-  const { locationName, duration, stopsCount, styles, transport, notes } = input
+  const { locationName, duration, stopsCount, styles, notes } = input
   const count = pois.length
   const poiList = pois.map((p, i) => `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})`).join('\n')
   return `You are a travel writing assistant. You have been given a list of real verified tourist attractions near ${locationName}. Your job is to write engaging descriptions for each place.
@@ -140,7 +138,6 @@ User's starting location: ${locationName}
 Trip duration: ${duration} day${duration > 1 ? 's' : ''}
 Number of stops: ${stopsCount}
 Travel styles: ${styles.join(', ')}
-Transport: ${transport}
 Notes: ${notes || 'none'}
 
 Here are the ${count} confirmed real places (with verified GPS coordinates):
@@ -184,7 +181,7 @@ JSON structure:
 }
 
 export function buildOTMFlow2Prompt(input: TripInput, pois: OTMPlace[], lang = 'English'): string {
-  const { destination, duration, styles, transport, notes } = input
+  const { destination, duration, styles, notes } = input
   const count = pois.length
   const poiList = pois.map((p, i) => `${i + 1}. ${p.name} (lat: ${p.lat}, lon: ${p.lon})`).join('\n')
   return `You are a travel writing assistant. You have been given a list of real verified tourist destinations in/near ${destination}. Your job is to write engaging descriptions for each place.
@@ -192,7 +189,6 @@ export function buildOTMFlow2Prompt(input: TripInput, pois: OTMPlace[], lang = '
 Destination: ${destination}
 Trip duration: ${duration} days
 Travel styles: ${styles.join(', ')}
-Transport: ${transport}
 Notes: ${notes || 'none'}
 
 Here are the ${count} confirmed real places (with verified GPS coordinates):
@@ -280,4 +276,29 @@ export async function generateTrip(prompt: string, useFallback = false): Promise
   }
 
   return result
+}
+
+// ─── Title translation ─────────────────────────────────────────────────────
+
+export async function translateTitle(title: string, targetLang: string): Promise<string> {
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 60,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'user', content: `Translate this travel trip title to ${targetLang}. Return ONLY valid JSON: {"title":"..."}\n\nTitle: ${title}` }],
+    }),
+  })
+  if (!response.ok) return title
+  const data = await response.json() as { choices?: { message?: { content?: string } }[] }
+  const content = data.choices?.[0]?.message?.content
+  if (!content) return title
+  try {
+    const parsed = JSON.parse(content) as { title?: string }
+    return parsed.title ?? title
+  } catch {
+    return title
+  }
 }

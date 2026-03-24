@@ -1,4 +1,4 @@
-import { TravelStyle, Transport } from './constants'
+import { TravelStyle } from './constants'
 
 export type Lang = 'en' | 'es'
 
@@ -23,7 +23,6 @@ const en = {
   numberOfStops: 'Number of stops',
   duration: 'Duration',
   travelStyle: 'Travel style',
-  transport: 'Transport',
   generateRoadtrip: 'Generate road trip',
   notesOptional: 'Notes (optional)',
   notesPlaceholder: 'e.g. travelling with kids, vegetarian food only, no hiking...',
@@ -100,17 +99,20 @@ const en = {
     hidden: 'Hidden gems',
   } as Record<TravelStyle, string>,
 
-  // Transport modes
-  transportModes: {
-    car: 'Car',
-    motorcycle: 'Motorcycle',
-    mixed: 'Mixed',
-  } as Record<Transport, string>,
-
   // bestTime translation map (Groq returns English values; translate for display)
   bestTimeLabels: { Morning: 'Morning', Afternoon: 'Afternoon', 'Full day': 'Full day' } as Record<string, string>,
   entranceFeeLabels: { Free: 'Free', Varies: 'Varies' } as Record<string, string>,
-  typeLabels: {} as Record<string, string>,
+  // Spanish → English (for trips generated in ES mode, viewed in EN mode)
+  typeLabels: {
+    Catedral: 'Cathedral', Museo: 'Museum', Playa: 'Beach', Parque: 'Park',
+    Jardín: 'Garden', Plaza: 'Square', Pueblo: 'Village', Ciudad: 'City',
+    Mercado: 'Market', Palacio: 'Palace', Castillo: 'Castle',
+    Iglesia: 'Church', Monumento: 'Monument', Mirador: 'Viewpoint',
+    Puente: 'Bridge', Torre: 'Tower', Ruinas: 'Ruins', Puerto: 'Harbor',
+    Valle: 'Valley', Lago: 'Lake', Cascada: 'Waterfall', Bosque: 'Forest',
+    Montaña: 'Mountain', 'Pueblo de montaña': 'Hill Town', 'Reserva Natural': 'Nature Reserve',
+    'Casco Antiguo': 'Old Town', 'Sitio Histórico': 'Historic Site', Barrio: 'Neighborhood',
+  } as Record<string, string>,
 
   // Groq prompt language instruction
   groqLang: 'English',
@@ -137,7 +139,6 @@ const es: typeof en = {
   numberOfStops: 'Número de paradas',
   duration: 'Duración',
   travelStyle: 'Estilo de viaje',
-  transport: 'Transporte',
   generateRoadtrip: 'Generar road trip',
   notesOptional: 'Notas (opcional)',
   notesPlaceholder: 'p.ej. viajando con niños, solo comida vegetariana, sin senderismo...',
@@ -213,13 +214,6 @@ const es: typeof en = {
     architecture: 'Arquitectura',
     hidden: 'Joyas ocultas',
   } as Record<TravelStyle, string>,
-
-  // Transport modes
-  transportModes: {
-    car: 'Coche',
-    motorcycle: 'Moto',
-    mixed: 'Mixto',
-  } as Record<Transport, string>,
 
   // bestTime translation map
   bestTimeLabels: { Morning: 'Mañana', Afternoon: 'Tarde', 'Full day': 'Día completo' } as Record<string, string>,

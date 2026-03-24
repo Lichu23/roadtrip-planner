@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { TripInput, TRAVEL_STYLES, TRANSPORT_MODES, DURATION_OPTIONS, TravelStyle, Transport } from '@/lib/constants'
+import { TripInput, TRAVEL_STYLES, DURATION_OPTIONS, TravelStyle } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -121,27 +121,6 @@ export default function FlowDestination({ formData, onFormChange, onGenerate, t 
         </div>
       </div>
 
-      {/* Transport */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">{t.transport}</Label>
-        <div className="flex flex-wrap gap-2">
-          {TRANSPORT_MODES.map(({ value }) => (
-            <Button
-              key={value}
-              variant={formData.transport === value ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onFormChange({ ...formData, transport: value as Transport })}
-              className={cn(
-                'rounded-full',
-                formData.transport === value &&
-                  'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
-              )}
-            >
-              {t.transportModes[value]}
-            </Button>
-          ))}
-        </div>
-      </div>
 
       {/* Notes */}
       <div className="space-y-2">

@@ -2,11 +2,9 @@ import { useRef, useState } from 'react'
 import {
   TripInput,
   TRAVEL_STYLES,
-  TRANSPORT_MODES,
   DURATION_OPTIONS,
   STOPS_COUNT_OPTIONS,
   TravelStyle,
-  Transport,
 } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -266,28 +264,6 @@ export default function FlowGPS({ formData, onFormChange, onGenerate, t }: FlowG
               )}
             >
               {t.travelStyles[value]}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Transport */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-slate-700">{t.transport}</Label>
-        <div className="flex flex-wrap gap-2">
-          {TRANSPORT_MODES.map(({ value }) => (
-            <Button
-              key={value}
-              variant={formData.transport === value ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => onFormChange({ ...formData, transport: value as Transport })}
-              className={cn(
-                'rounded-full',
-                formData.transport === value &&
-                  'bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white'
-              )}
-            >
-              {t.transportModes[value]}
             </Button>
           ))}
         </div>

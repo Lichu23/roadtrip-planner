@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, startTransition } from 'react'
 import TopBar from '@/components/TopBar'
 import HistoryDrawer from '@/components/HistoryDrawer'
 import IntakeScreen from '@/components/IntakeScreen'
@@ -9,12 +9,13 @@ import {
   Flow,
   Trip,
   TripInput,
+  TripResult,
   HistoryEntry,
   Stop,
   DEFAULT_FORM_DATA,
 } from '@/lib/constants'
 import { Lang, translations } from '@/lib/i18n'
-import { generateTrip, buildFlow1Prompt, buildFlow2Prompt, buildOTMFlow1Prompt, buildOTMFlow2Prompt } from '@/lib/groq'
+import { generateTrip, translateTitle, buildFlow1Prompt, buildFlow2Prompt, buildOTMFlow1Prompt, buildOTMFlow2Prompt } from '@/lib/groq'
 import { sortByNearest, geocodeAllStops } from '@/lib/geo'
 import { fetchPOIs, styleToKinds, radiusByDuration, deduplicatePOIs } from '@/lib/opentripmap'
 import { formatDays } from '@/lib/format'
@@ -65,6 +66,7 @@ function normalizeDestStops(raw: Stop[]): Stop[] {
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export default function Home() {
+  // Simple defaults — must match SSR output to avoid hydration mismatch
   const [currentState, setCurrentState] = useState<AppState>('intake')
   const [currentFlow, setCurrentFlow] = useState<Flow>('gps')
   const [formData, setFormData] = useState<TripInput>(DEFAULT_FORM_DATA)
@@ -86,48 +88,41 @@ export default function Home() {
     setScreenVisible(true)
   }
 
-  // ─── On mount: restore language ───────────────────────────────────────────
+  // ─── After hydration: restore all persisted state ─────────────────────────
+  // startTransition defers these updates so they don't block the initial paint
   useEffect(() => {
-    const saved = localStorage.getItem('roadtrip_lang') as Lang | null
-    if (saved === 'en' || saved === 'es') setLang(saved)
+    startTransition(() => {
+      const savedLang = localStorage.getItem('roadtrip_lang') as Lang | null
+      if (savedLang === 'en' || savedLang === 'es') setLang(savedLang)
+
+      setHistory(loadHistory())
+
+      const tripFromURL = decodeTripFromURL()
+      if (tripFromURL) {
+        setTrip(tripFromURL)
+        setCurrentFlow(tripFromURL.flow)
+        setCurrentState('results')
+        return
+      }
+
+      const savedTrip = loadCurrentTrip()
+      const savedForm = loadFormData()
+      if (savedTrip) {
+        setTrip(savedTrip)
+        setCurrentFlow(savedTrip.flow)
+        setCurrentState('results')
+      }
+      if (savedForm) {
+        setFormData(savedForm)
+        if (!savedTrip) setCurrentFlow(savedForm.destination ? 'destination' : 'gps')
+      }
+    })
   }, [])
 
   function handleLangChange(next: Lang) {
     setLang(next)
     localStorage.setItem('roadtrip_lang', next)
   }
-
-  // ─── On mount: restore from URL hash or localStorage ─────────────────────
-  useEffect(() => {
-    // URL hash takes priority
-    const tripFromURL = decodeTripFromURL()
-    if (tripFromURL) {
-      setTrip(tripFromURL)
-      setCurrentFlow(tripFromURL.flow)
-      setCurrentState('results')
-      return
-    }
-
-    // Fall back to saved current trip
-    const savedTrip = loadCurrentTrip()
-    if (savedTrip) {
-      setTrip(savedTrip)
-      setCurrentFlow(savedTrip.flow)
-      setCurrentState('results')
-    }
-
-    // Restore form data
-    const savedForm = loadFormData()
-    if (savedForm) {
-      setFormData(savedForm)
-      setCurrentFlow(savedForm.destination ? 'destination' : 'gps')
-    }
-  }, [])
-
-  // ─── On mount: load history ───────────────────────────────────────────────
-  useEffect(() => {
-    setHistory(loadHistory())
-  }, [])
 
   // ─── Persist trip on every change ────────────────────────────────────────
   useEffect(() => {
@@ -144,7 +139,6 @@ export default function Home() {
     if (currentState !== 'loading') return
     let i = 0
     const messages = t.loadingMessages
-    setLoadingMessage(messages[0])
     const interval = setInterval(() => {
       i = (i + 1) % messages.length
       setLoadingMessage(messages[i])
@@ -166,7 +160,7 @@ export default function Home() {
     setError(null)
 
     try {
-      let prompt: string
+      let promptEn: string, promptEs: string
       let poisForOverride: { lat: number; lon: number }[] = []
 
       if (input.lat !== null && input.lon !== null) {
@@ -181,29 +175,50 @@ export default function Home() {
         if (pois.length > 0) {
           poisForOverride = pois.map((p) => ({ lat: p.lat, lon: p.lon }))
           setLoadingMessage(t.loadingMessages[2]) // "Generating descriptions..."
-          prompt = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, t.groqLang)
+          promptEn = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, 'English')
+          promptEs = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, 'Spanish')
         } else {
           // OTM returned nothing — fall back to Groq-only
-          prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
+          promptEn = buildFlow1Prompt({ ...input, lat, lon }, 'English')
+          promptEs = buildFlow1Prompt({ ...input, lat, lon }, 'Spanish')
         }
       } else {
         // No coords — Groq-only path
-        prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
+        promptEn = buildFlow1Prompt({ ...input, lat, lon }, 'English')
+        promptEs = buildFlow1Prompt({ ...input, lat, lon }, 'Spanish')
       }
 
-      setLastPrompt(prompt)
-      const result = await generateTrip(prompt)
+      setLastPrompt(lang === 'es' ? promptEs : promptEn)
+      // Generate EN first to get the canonical title, then translate + generate ES in parallel
+      const resultEn = await generateTrip(promptEn)
+      const [resultEs, esTitle] = await Promise.all([
+        generateTrip(promptEs),
+        translateTitle(resultEn.title, 'Spanish'),
+      ])
 
-      let stops: Stop[]
+      // Normalize EN stops as the canonical source (coords, ids, distances)
+      let enStops: Stop[]
       if (poisForOverride.length > 0) {
-        // Override coords index-by-index (belt-and-suspenders)
-        const overridden = (result.stops as Stop[]).map((s, i) =>
+        const overridden = (resultEn.stops as Stop[]).map((s, i) =>
           poisForOverride[i] ? { ...s, lat: poisForOverride[i].lat, lon: poisForOverride[i].lon } : s
         )
-        stops = normalizeStops(overridden, lat, lon)
+        enStops = normalizeStops(overridden, lat, lon)
       } else {
-        const geocoded = await geocodeAllStops(result.stops as Stop[], input.locationName)
-        stops = normalizeStops(geocoded, lat, lon)
+        const geocoded = await geocodeAllStops(resultEn.stops as Stop[], input.locationName)
+        enStops = normalizeStops(geocoded, lat, lon)
+      }
+
+      // ES stops: same geo as EN, overlay ES text-only fields
+      const esStops: Stop[] = enStops.map((enStop, i) => {
+        const esRaw = resultEs.stops[i] as Stop | undefined
+        if (!esRaw) return enStop
+        return { ...enStop, type: esRaw.type, description: esRaw.description,
+          highlights: esRaw.highlights, bestFor: esRaw.bestFor, practicalInfo: esRaw.practicalInfo }
+      })
+
+      const results = {
+        en: { ...resultEn, stops: enStops } as TripResult,
+        es: { ...resultEs, title: esTitle, stops: esStops } as TripResult,
       }
 
       const newTrip: Trip = {
@@ -211,7 +226,8 @@ export default function Home() {
         createdAt: new Date().toISOString(),
         flow: 'gps',
         input,
-        result: { ...result, stops },
+        result: results[lang] ?? results.en,
+        results,
       }
 
       addToHistory(newTrip)
@@ -236,7 +252,7 @@ export default function Home() {
     setError(null)
 
     try {
-      let prompt: string
+      let promptEn: string, promptEs: string
       let poisForOverride: { lat: number; lon: number }[] = []
 
       if (input.lat !== null && input.lon !== null) {
@@ -252,28 +268,49 @@ export default function Home() {
         if (pois.length > 0) {
           poisForOverride = pois.map((p) => ({ lat: p.lat, lon: p.lon }))
           setLoadingMessage(t.loadingMessages[2]) // "Generating descriptions..."
-          prompt = buildOTMFlow2Prompt(input, pois, t.groqLang)
+          promptEn = buildOTMFlow2Prompt(input, pois, 'English')
+          promptEs = buildOTMFlow2Prompt(input, pois, 'Spanish')
         } else {
           // OTM returned nothing — fall back to Groq-only
-          prompt = buildFlow2Prompt(input, t.groqLang)
+          promptEn = buildFlow2Prompt(input, 'English')
+          promptEs = buildFlow2Prompt(input, 'Spanish')
         }
       } else {
         // No coords — Groq-only path
-        prompt = buildFlow2Prompt(input, t.groqLang)
+        promptEn = buildFlow2Prompt(input, 'English')
+        promptEs = buildFlow2Prompt(input, 'Spanish')
       }
 
-      setLastPrompt(prompt)
-      const result = await generateTrip(prompt)
+      setLastPrompt(lang === 'es' ? promptEs : promptEn)
+      const resultEn = await generateTrip(promptEn)
+      const [resultEs, esTitle] = await Promise.all([
+        generateTrip(promptEs),
+        translateTitle(resultEn.title, 'Spanish'),
+      ])
 
-      let stops: Stop[]
+      // Normalize EN stops as canonical source (coords, ids, day assignments)
+      let enStops: Stop[]
       if (poisForOverride.length > 0) {
-        const overridden = (result.stops as Stop[]).map((s, i) =>
+        const overridden = (resultEn.stops as Stop[]).map((s, i) =>
           poisForOverride[i] ? { ...s, lat: poisForOverride[i].lat, lon: poisForOverride[i].lon } : s
         )
-        stops = normalizeDestStops(overridden)
+        enStops = normalizeDestStops(overridden)
       } else {
-        const geocoded = await geocodeAllStops(result.stops as Stop[], input.destination)
-        stops = normalizeDestStops(geocoded)
+        const geocoded = await geocodeAllStops(resultEn.stops as Stop[], input.destination)
+        enStops = normalizeDestStops(geocoded)
+      }
+
+      // ES stops: same geo as EN, overlay ES text-only fields
+      const esStops: Stop[] = enStops.map((enStop, i) => {
+        const esRaw = resultEs.stops[i] as Stop | undefined
+        if (!esRaw) return enStop
+        return { ...enStop, type: esRaw.type, description: esRaw.description,
+          highlights: esRaw.highlights, bestFor: esRaw.bestFor, practicalInfo: esRaw.practicalInfo }
+      })
+
+      const results = {
+        en: { ...resultEn, stops: enStops } as TripResult,
+        es: { ...resultEs, title: esTitle, stops: esStops, entryPointReason: resultEs.entryPointReason } as TripResult,
       }
 
       const newTrip: Trip = {
@@ -281,7 +318,8 @@ export default function Home() {
         createdAt: new Date().toISOString(),
         flow: 'destination',
         input,
-        result: { ...result, stops },
+        result: results[lang] ?? results.en,
+        results,
       }
 
       addToHistory(newTrip)
@@ -356,12 +394,16 @@ export default function Home() {
 
   function handleVisitedChange(id: number, visited: boolean) {
     if (!trip) return
+    const markVisited = (stops: Stop[]) => stops.map((s) => (s.id === id ? { ...s, visited } : s))
     setTrip({
       ...trip,
-      result: {
-        ...trip.result,
-        stops: trip.result.stops.map((s) => (s.id === id ? { ...s, visited } : s)),
-      },
+      result: { ...trip.result, stops: markVisited(trip.result.stops) },
+      results: trip.results
+        ? {
+            en: { ...trip.results.en, stops: markVisited(trip.results.en.stops) },
+            es: { ...trip.results.es, stops: markVisited(trip.results.es.stops) },
+          }
+        : undefined,
     })
   }
 
@@ -443,7 +485,7 @@ export default function Home() {
 
       {currentState === 'results' && trip && (
         <ResultsScreen
-          trip={trip}
+          trip={{ ...trip, result: trip.results?.[lang] ?? trip.result }}
           onEdit={handleEdit}
           onRegenerate={handleRegenerate}
           onNewTrip={handleNewTrip}
