@@ -394,12 +394,16 @@ export default function Home() {
 
   function handleVisitedChange(id: number, visited: boolean) {
     if (!trip) return
+    const markVisited = (stops: Stop[]) => stops.map((s) => (s.id === id ? { ...s, visited } : s))
     setTrip({
       ...trip,
-      result: {
-        ...trip.result,
-        stops: trip.result.stops.map((s) => (s.id === id ? { ...s, visited } : s)),
-      },
+      result: { ...trip.result, stops: markVisited(trip.result.stops) },
+      results: trip.results
+        ? {
+            en: { ...trip.results.en, stops: markVisited(trip.results.en.stops) },
+            es: { ...trip.results.es, stops: markVisited(trip.results.es.stops) },
+          }
+        : undefined,
     })
   }
 
