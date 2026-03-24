@@ -2,7 +2,9 @@ import { Trip } from './constants'
 
 export function encodeTripToURL(trip: Trip): string {
   if (typeof window === 'undefined') return ''
-  const json = JSON.stringify(trip)
+  // Omit `results` (both-lang data) to keep the URL short — shared trips use `result` only
+  const { results: _omit, ...tripToShare } = trip
+  const json = JSON.stringify(tripToShare)
   const b64 = btoa(unescape(encodeURIComponent(json)))
   return `${window.location.origin}${window.location.pathname}#data=${b64}`
 }
