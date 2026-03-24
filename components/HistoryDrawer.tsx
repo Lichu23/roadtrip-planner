@@ -4,6 +4,7 @@ import { T } from '@/lib/i18n'
 import {
   Drawer,
   DrawerContent,
+  DrawerDescription,
   DrawerHeader,
   DrawerTitle,
   DrawerClose,
@@ -32,9 +33,10 @@ export default function HistoryDrawer({
 }: HistoryDrawerProps) {
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
-      <DrawerContent className="flex flex-col h-full max-w-sm">
+      <DrawerContent className="flex flex-col h-full max-w-sm bg-white">
         <DrawerHeader className="flex items-center justify-between border-b border-slate-100 pb-3">
           <DrawerTitle>{t.searchHistory}</DrawerTitle>
+          <DrawerDescription className="sr-only">{t.searchHistory}</DrawerDescription>
           <DrawerClose asChild>
             <Button variant="ghost" size="icon-sm" className="text-slate-400 hover:text-slate-700">
               ✕
