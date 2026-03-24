@@ -66,15 +66,36 @@ function normalizeDestStops(raw: Stop[]): Stop[] {
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [currentState, setCurrentState] = useState<AppState>('intake')
-  const [currentFlow, setCurrentFlow] = useState<Flow>('gps')
-  const [formData, setFormData] = useState<TripInput>(DEFAULT_FORM_DATA)
-  const [trip, setTrip] = useState<Trip | null>(null)
+  // ─── Lazy initializers — read localStorage/URL once on mount ─────────────
+  const [lang, setLang] = useState<Lang>(() => {
+    if (typeof window === 'undefined') return 'en'
+    const saved = localStorage.getItem('roadtrip_lang') as Lang | null
+    return saved === 'en' || saved === 'es' ? saved : 'en'
+  })
+  const [history, setHistory] = useState<HistoryEntry[]>(() =>
+    typeof window === 'undefined' ? [] : loadHistory()
+  )
+  const [_init] = useState(() => {
+    if (typeof window === 'undefined') return { trip: null, flow: 'gps' as Flow, appState: 'intake' as AppState, formData: DEFAULT_FORM_DATA }
+    const tripFromURL = decodeTripFromURL()
+    if (tripFromURL) return { trip: tripFromURL, flow: tripFromURL.flow as Flow, appState: 'results' as AppState, formData: DEFAULT_FORM_DATA }
+    const savedTrip = loadCurrentTrip()
+    const savedForm = loadFormData()
+    return {
+      trip: savedTrip ?? null,
+      flow: (savedTrip?.flow ?? (savedForm?.destination ? 'destination' : 'gps')) as Flow,
+      appState: (savedTrip ? 'results' : 'intake') as AppState,
+      formData: savedForm ?? DEFAULT_FORM_DATA,
+    }
+  })
+
+  const [currentState, setCurrentState] = useState<AppState>(_init.appState)
+  const [currentFlow, setCurrentFlow] = useState<Flow>(_init.flow)
+  const [formData, setFormData] = useState<TripInput>(_init.formData)
+  const [trip, setTrip] = useState<Trip | null>(_init.trip)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [history, setHistory] = useState<HistoryEntry[]>([])
   const [lastPrompt, setLastPrompt] = useState<string>('')
-  const [lang, setLang] = useState<Lang>('en')
   const [screenVisible, setScreenVisible] = useState(true)
 
   const t = useMemo(() => translations[lang], [lang])
@@ -87,48 +108,10 @@ export default function Home() {
     setScreenVisible(true)
   }
 
-  // ─── On mount: restore language ───────────────────────────────────────────
-  useEffect(() => {
-    const saved = localStorage.getItem('roadtrip_lang') as Lang | null
-    if (saved === 'en' || saved === 'es') setLang(saved)
-  }, [])
-
   function handleLangChange(next: Lang) {
     setLang(next)
     localStorage.setItem('roadtrip_lang', next)
   }
-
-  // ─── On mount: restore from URL hash or localStorage ─────────────────────
-  useEffect(() => {
-    // URL hash takes priority
-    const tripFromURL = decodeTripFromURL()
-    if (tripFromURL) {
-      setTrip(tripFromURL)
-      setCurrentFlow(tripFromURL.flow)
-      setCurrentState('results')
-      return
-    }
-
-    // Fall back to saved current trip
-    const savedTrip = loadCurrentTrip()
-    if (savedTrip) {
-      setTrip(savedTrip)
-      setCurrentFlow(savedTrip.flow)
-      setCurrentState('results')
-    }
-
-    // Restore form data
-    const savedForm = loadFormData()
-    if (savedForm) {
-      setFormData(savedForm)
-      setCurrentFlow(savedForm.destination ? 'destination' : 'gps')
-    }
-  }, [])
-
-  // ─── On mount: load history ───────────────────────────────────────────────
-  useEffect(() => {
-    setHistory(loadHistory())
-  }, [])
 
   // ─── Persist trip on every change ────────────────────────────────────────
   useEffect(() => {
@@ -145,7 +128,6 @@ export default function Home() {
     if (currentState !== 'loading') return
     let i = 0
     const messages = t.loadingMessages
-    setLoadingMessage(messages[0])
     const interval = setInterval(() => {
       i = (i + 1) % messages.length
       setLoadingMessage(messages[i])
@@ -485,7 +467,7 @@ export default function Home() {
 
       {currentState === 'results' && trip && (
         <ResultsScreen
-          trip={{ ...trip, result: trip.results?.[lang] ?? trip.result }}
+          trip={trip}
           onEdit={handleEdit}
           onRegenerate={handleRegenerate}
           onNewTrip={handleNewTrip}
