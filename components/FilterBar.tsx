@@ -39,8 +39,8 @@ export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip, t }: 
           onClick={onRegenerate}
           className="text-slate-600 hover:text-slate-900 font-medium"
         >
-          <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-          {t.reshuffle}
+          <RefreshCw className="w-3.5 h-3.5 sm:mr-1.5" />
+          <span className="hidden sm:inline">{t.reshuffle}</span>
         </Button>
         <Button
           variant="ghost"
@@ -48,8 +48,8 @@ export default function FilterBar({ trip, onEdit, onRegenerate, onNewTrip, t }: 
           onClick={onEdit}
           className="text-slate-600 hover:text-slate-900 font-medium"
         >
-          <SlidersHorizontal className="w-3.5 h-3.5 mr-1.5" />
-          {t.filters}
+          <SlidersHorizontal className="w-3.5 h-3.5 sm:mr-1.5" />
+          <span className="hidden sm:inline">{t.filters}</span>
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>
