@@ -92,9 +92,82 @@ export default function Home() {
     if (saved === 'en' || saved === 'es') setLang(saved)
   }, [])
 
-  function handleLangChange(next: Lang) {
+  async function handleLangChange(next: Lang) {
     setLang(next)
     localStorage.setItem('roadtrip_lang', next)
+
+    // Re-translate AI text if a trip is active
+    if (currentState === 'results' && trip) {
+      const newT = translations[next]
+      const poiList = trip.result.stops
+        .map((s, i) => `${i + 1}. ${s.name} (lat: ${s.lat}, lon: ${s.lon})`)
+        .join('\n')
+
+      const retranslatePrompt = `You are a travel writing assistant. Translate and rewrite the descriptions for these places into ${newT.groqLang}.
+
+Places:
+${poiList}
+
+Trip context: ${trip.flow === 'gps' ? trip.input.locationName : trip.input.destination}, ${trip.input.duration} day(s)
+
+Return ONLY a valid JSON object with the same structure. No explanation, no markdown.
+
+Rules:
+- Return EXACTLY ${trip.result.stops.length} stops in the SAME ORDER
+- Keep "name" in official local language (do not translate place names)
+- Write title, type, description, highlights, and practicalInfo in ${newT.groqLang}
+- type: short category word (Cathedral, Museum, Park, etc. in ${newT.groqLang})
+- description: exactly 2 sentences
+- highlights: 2-3 short items
+- practicalInfo.bestTime: one of ${newT.groqLang === 'Spanish' ? 'Mañana, Tarde, Día completo' : 'Morning, Afternoon, Full day'}
+- practicalInfo.entranceFee: ${newT.groqLang === 'Spanish' ? 'Gratis or Varía' : 'Free or Varies'} if unknown
+- Copy lat/lon EXACTLY as given above
+
+JSON structure:
+{
+  "title": "string",
+  "totalKm": ${trip.result.totalKm},
+  "stops": [
+    {
+      "name": "string",
+      "type": "string",
+      "description": "string",
+      "lat": number,
+      "lon": number,
+      "suggestedDays": number,
+      "highlights": ["string"],
+      "bestFor": "string",
+      "practicalInfo": { "entranceFee": "string", "bestTime": "string", "tip": "string" }
+    }
+  ]
+}`
+
+      setCurrentState('loading')
+      setLoadingMessage(newT.loadingMessages[2])
+
+      try {
+        const result = await generateTrip(retranslatePrompt)
+        const updatedStops: Stop[] = trip.result.stops.map((prev, i) => {
+          const s = result.stops[i]
+          if (!s) return prev
+          return {
+            ...prev,
+            type: s.type,
+            description: s.description,
+            highlights: s.highlights,
+            bestFor: s.bestFor,
+            practicalInfo: s.practicalInfo,
+          }
+        })
+        await fadeToState(() => {
+          setTrip({ ...trip, result: { ...trip.result, title: result.title, stops: updatedStops } })
+          setCurrentState('results')
+        })
+      } catch {
+        // Fail silently — UI labels already switched, AI text stays as-is
+        setCurrentState('results')
+      }
+    }
   }
 
   // ─── On mount: restore from URL hash or localStorage ─────────────────────
