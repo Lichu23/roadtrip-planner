@@ -277,3 +277,28 @@ export async function generateTrip(prompt: string, useFallback = false): Promise
 
   return result
 }
+
+// ─── Title translation ─────────────────────────────────────────────────────
+
+export async function translateTitle(title: string, targetLang: string): Promise<string> {
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      max_tokens: 60,
+      response_format: { type: 'json_object' },
+      messages: [{ role: 'user', content: `Translate this travel trip title to ${targetLang}. Return ONLY valid JSON: {"title":"..."}\n\nTitle: ${title}` }],
+    }),
+  })
+  if (!response.ok) return title
+  const data = await response.json() as { choices?: { message?: { content?: string } }[] }
+  const content = data.choices?.[0]?.message?.content
+  if (!content) return title
+  try {
+    const parsed = JSON.parse(content) as { title?: string }
+    return parsed.title ?? title
+  } catch {
+    return title
+  }
+}

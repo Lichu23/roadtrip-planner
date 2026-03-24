@@ -15,7 +15,7 @@ import {
   DEFAULT_FORM_DATA,
 } from '@/lib/constants'
 import { Lang, translations } from '@/lib/i18n'
-import { generateTrip, buildFlow1Prompt, buildFlow2Prompt, buildOTMFlow1Prompt, buildOTMFlow2Prompt } from '@/lib/groq'
+import { generateTrip, translateTitle, buildFlow1Prompt, buildFlow2Prompt, buildOTMFlow1Prompt, buildOTMFlow2Prompt } from '@/lib/groq'
 import { sortByNearest, geocodeAllStops } from '@/lib/geo'
 import { fetchPOIs, styleToKinds, radiusByDuration, deduplicatePOIs } from '@/lib/opentripmap'
 import { formatDays } from '@/lib/format'
@@ -189,9 +189,11 @@ export default function Home() {
       }
 
       setLastPrompt(lang === 'es' ? promptEs : promptEn)
-      const [resultEn, resultEs] = await Promise.all([
-        generateTrip(promptEn),
+      // Generate EN first to get the canonical title, then translate + generate ES in parallel
+      const resultEn = await generateTrip(promptEn)
+      const [resultEs, esTitle] = await Promise.all([
         generateTrip(promptEs),
+        translateTitle(resultEn.title, 'Spanish'),
       ])
 
       // Normalize EN stops as the canonical source (coords, ids, distances)
@@ -216,7 +218,7 @@ export default function Home() {
 
       const results = {
         en: { ...resultEn, stops: enStops } as TripResult,
-        es: { ...resultEs, stops: esStops } as TripResult,
+        es: { ...resultEs, title: esTitle, stops: esStops } as TripResult,
       }
 
       const newTrip: Trip = {
@@ -280,9 +282,10 @@ export default function Home() {
       }
 
       setLastPrompt(lang === 'es' ? promptEs : promptEn)
-      const [resultEn, resultEs] = await Promise.all([
-        generateTrip(promptEn),
+      const resultEn = await generateTrip(promptEn)
+      const [resultEs, esTitle] = await Promise.all([
         generateTrip(promptEs),
+        translateTitle(resultEn.title, 'Spanish'),
       ])
 
       // Normalize EN stops as canonical source (coords, ids, day assignments)
@@ -307,7 +310,7 @@ export default function Home() {
 
       const results = {
         en: { ...resultEn, stops: enStops } as TripResult,
-        es: { ...resultEs, stops: esStops, entryPointReason: resultEs.entryPointReason } as TripResult,
+        es: { ...resultEs, title: esTitle, stops: esStops, entryPointReason: resultEs.entryPointReason } as TripResult,
       }
 
       const newTrip: Trip = {
@@ -478,7 +481,7 @@ export default function Home() {
 
       {currentState === 'results' && trip && (
         <ResultsScreen
-          trip={trip}
+          trip={{ ...trip, result: trip.results?.[lang] ?? trip.result }}
           onEdit={handleEdit}
           onRegenerate={handleRegenerate}
           onNewTrip={handleNewTrip}
