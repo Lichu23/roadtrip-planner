@@ -9,6 +9,7 @@ import {
   Flow,
   Trip,
   TripInput,
+  TripResult,
   HistoryEntry,
   Stop,
   DEFAULT_FORM_DATA,
@@ -92,82 +93,9 @@ export default function Home() {
     if (saved === 'en' || saved === 'es') setLang(saved)
   }, [])
 
-  async function handleLangChange(next: Lang) {
+  function handleLangChange(next: Lang) {
     setLang(next)
     localStorage.setItem('roadtrip_lang', next)
-
-    // Re-translate AI text if a trip is active
-    if (currentState === 'results' && trip) {
-      const newT = translations[next]
-      const poiList = trip.result.stops
-        .map((s, i) => `${i + 1}. ${s.name} (lat: ${s.lat}, lon: ${s.lon})`)
-        .join('\n')
-
-      const retranslatePrompt = `You are a travel writing assistant. Translate and rewrite the descriptions for these places into ${newT.groqLang}.
-
-Places:
-${poiList}
-
-Trip context: ${trip.flow === 'gps' ? trip.input.locationName : trip.input.destination}, ${trip.input.duration} day(s)
-
-Return ONLY a valid JSON object with the same structure. No explanation, no markdown.
-
-Rules:
-- Return EXACTLY ${trip.result.stops.length} stops in the SAME ORDER
-- Keep "name" in official local language (do not translate place names)
-- Write title, type, description, highlights, and practicalInfo in ${newT.groqLang}
-- type: short category word (Cathedral, Museum, Park, etc. in ${newT.groqLang})
-- description: exactly 2 sentences
-- highlights: 2-3 short items
-- practicalInfo.bestTime: one of ${newT.groqLang === 'Spanish' ? 'Mañana, Tarde, Día completo' : 'Morning, Afternoon, Full day'}
-- practicalInfo.entranceFee: ${newT.groqLang === 'Spanish' ? 'Gratis or Varía' : 'Free or Varies'} if unknown
-- Copy lat/lon EXACTLY as given above
-
-JSON structure:
-{
-  "title": "string",
-  "totalKm": ${trip.result.totalKm},
-  "stops": [
-    {
-      "name": "string",
-      "type": "string",
-      "description": "string",
-      "lat": number,
-      "lon": number,
-      "suggestedDays": number,
-      "highlights": ["string"],
-      "bestFor": "string",
-      "practicalInfo": { "entranceFee": "string", "bestTime": "string", "tip": "string" }
-    }
-  ]
-}`
-
-      setCurrentState('loading')
-      setLoadingMessage(newT.loadingMessages[2])
-
-      try {
-        const result = await generateTrip(retranslatePrompt)
-        const updatedStops: Stop[] = trip.result.stops.map((prev, i) => {
-          const s = result.stops[i]
-          if (!s) return prev
-          return {
-            ...prev,
-            type: s.type,
-            description: s.description,
-            highlights: s.highlights,
-            bestFor: s.bestFor,
-            practicalInfo: s.practicalInfo,
-          }
-        })
-        await fadeToState(() => {
-          setTrip({ ...trip, result: { ...trip.result, title: result.title, stops: updatedStops } })
-          setCurrentState('results')
-        })
-      } catch {
-        // Fail silently — UI labels already switched, AI text stays as-is
-        setCurrentState('results')
-      }
-    }
   }
 
   // ─── On mount: restore from URL hash or localStorage ─────────────────────
@@ -239,7 +167,7 @@ JSON structure:
     setError(null)
 
     try {
-      let prompt: string
+      let promptEn: string, promptEs: string
       let poisForOverride: { lat: number; lon: number }[] = []
 
       if (input.lat !== null && input.lon !== null) {
@@ -254,29 +182,48 @@ JSON structure:
         if (pois.length > 0) {
           poisForOverride = pois.map((p) => ({ lat: p.lat, lon: p.lon }))
           setLoadingMessage(t.loadingMessages[2]) // "Generating descriptions..."
-          prompt = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, t.groqLang)
+          promptEn = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, 'English')
+          promptEs = buildOTMFlow1Prompt({ ...input, lat, lon }, pois, 'Spanish')
         } else {
           // OTM returned nothing — fall back to Groq-only
-          prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
+          promptEn = buildFlow1Prompt({ ...input, lat, lon }, 'English')
+          promptEs = buildFlow1Prompt({ ...input, lat, lon }, 'Spanish')
         }
       } else {
         // No coords — Groq-only path
-        prompt = buildFlow1Prompt({ ...input, lat, lon }, t.groqLang)
+        promptEn = buildFlow1Prompt({ ...input, lat, lon }, 'English')
+        promptEs = buildFlow1Prompt({ ...input, lat, lon }, 'Spanish')
       }
 
-      setLastPrompt(prompt)
-      const result = await generateTrip(prompt)
+      setLastPrompt(lang === 'es' ? promptEs : promptEn)
+      const [resultEn, resultEs] = await Promise.all([
+        generateTrip(promptEn),
+        generateTrip(promptEs),
+      ])
 
-      let stops: Stop[]
+      // Normalize EN stops as the canonical source (coords, ids, distances)
+      let enStops: Stop[]
       if (poisForOverride.length > 0) {
-        // Override coords index-by-index (belt-and-suspenders)
-        const overridden = (result.stops as Stop[]).map((s, i) =>
+        const overridden = (resultEn.stops as Stop[]).map((s, i) =>
           poisForOverride[i] ? { ...s, lat: poisForOverride[i].lat, lon: poisForOverride[i].lon } : s
         )
-        stops = normalizeStops(overridden, lat, lon)
+        enStops = normalizeStops(overridden, lat, lon)
       } else {
-        const geocoded = await geocodeAllStops(result.stops as Stop[], input.locationName)
-        stops = normalizeStops(geocoded, lat, lon)
+        const geocoded = await geocodeAllStops(resultEn.stops as Stop[], input.locationName)
+        enStops = normalizeStops(geocoded, lat, lon)
+      }
+
+      // ES stops: same geo as EN, overlay ES text-only fields
+      const esStops: Stop[] = enStops.map((enStop, i) => {
+        const esRaw = resultEs.stops[i] as Stop | undefined
+        if (!esRaw) return enStop
+        return { ...enStop, type: esRaw.type, description: esRaw.description,
+          highlights: esRaw.highlights, bestFor: esRaw.bestFor, practicalInfo: esRaw.practicalInfo }
+      })
+
+      const results = {
+        en: { ...resultEn, stops: enStops } as TripResult,
+        es: { ...resultEs, stops: esStops } as TripResult,
       }
 
       const newTrip: Trip = {
@@ -284,7 +231,8 @@ JSON structure:
         createdAt: new Date().toISOString(),
         flow: 'gps',
         input,
-        result: { ...result, stops },
+        result: results[lang] ?? results.en,
+        results,
       }
 
       addToHistory(newTrip)
@@ -309,7 +257,7 @@ JSON structure:
     setError(null)
 
     try {
-      let prompt: string
+      let promptEn: string, promptEs: string
       let poisForOverride: { lat: number; lon: number }[] = []
 
       if (input.lat !== null && input.lon !== null) {
@@ -325,28 +273,48 @@ JSON structure:
         if (pois.length > 0) {
           poisForOverride = pois.map((p) => ({ lat: p.lat, lon: p.lon }))
           setLoadingMessage(t.loadingMessages[2]) // "Generating descriptions..."
-          prompt = buildOTMFlow2Prompt(input, pois, t.groqLang)
+          promptEn = buildOTMFlow2Prompt(input, pois, 'English')
+          promptEs = buildOTMFlow2Prompt(input, pois, 'Spanish')
         } else {
           // OTM returned nothing — fall back to Groq-only
-          prompt = buildFlow2Prompt(input, t.groqLang)
+          promptEn = buildFlow2Prompt(input, 'English')
+          promptEs = buildFlow2Prompt(input, 'Spanish')
         }
       } else {
         // No coords — Groq-only path
-        prompt = buildFlow2Prompt(input, t.groqLang)
+        promptEn = buildFlow2Prompt(input, 'English')
+        promptEs = buildFlow2Prompt(input, 'Spanish')
       }
 
-      setLastPrompt(prompt)
-      const result = await generateTrip(prompt)
+      setLastPrompt(lang === 'es' ? promptEs : promptEn)
+      const [resultEn, resultEs] = await Promise.all([
+        generateTrip(promptEn),
+        generateTrip(promptEs),
+      ])
 
-      let stops: Stop[]
+      // Normalize EN stops as canonical source (coords, ids, day assignments)
+      let enStops: Stop[]
       if (poisForOverride.length > 0) {
-        const overridden = (result.stops as Stop[]).map((s, i) =>
+        const overridden = (resultEn.stops as Stop[]).map((s, i) =>
           poisForOverride[i] ? { ...s, lat: poisForOverride[i].lat, lon: poisForOverride[i].lon } : s
         )
-        stops = normalizeDestStops(overridden)
+        enStops = normalizeDestStops(overridden)
       } else {
-        const geocoded = await geocodeAllStops(result.stops as Stop[], input.destination)
-        stops = normalizeDestStops(geocoded)
+        const geocoded = await geocodeAllStops(resultEn.stops as Stop[], input.destination)
+        enStops = normalizeDestStops(geocoded)
+      }
+
+      // ES stops: same geo as EN, overlay ES text-only fields
+      const esStops: Stop[] = enStops.map((enStop, i) => {
+        const esRaw = resultEs.stops[i] as Stop | undefined
+        if (!esRaw) return enStop
+        return { ...enStop, type: esRaw.type, description: esRaw.description,
+          highlights: esRaw.highlights, bestFor: esRaw.bestFor, practicalInfo: esRaw.practicalInfo }
+      })
+
+      const results = {
+        en: { ...resultEn, stops: enStops } as TripResult,
+        es: { ...resultEs, stops: esStops, entryPointReason: resultEs.entryPointReason } as TripResult,
       }
 
       const newTrip: Trip = {
@@ -354,7 +322,8 @@ JSON structure:
         createdAt: new Date().toISOString(),
         flow: 'destination',
         input,
-        result: { ...result, stops },
+        result: results[lang] ?? results.en,
+        results,
       }
 
       addToHistory(newTrip)
@@ -516,7 +485,7 @@ JSON structure:
 
       {currentState === 'results' && trip && (
         <ResultsScreen
-          trip={trip}
+          trip={{ ...trip, result: trip.results?.[lang] ?? trip.result }}
           onEdit={handleEdit}
           onRegenerate={handleRegenerate}
           onNewTrip={handleNewTrip}

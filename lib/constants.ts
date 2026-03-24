@@ -57,6 +57,7 @@ export interface Trip {
   flow: Flow
   input: TripInput
   result: TripResult
+  results?: { en: TripResult; es: TripResult }
 }
 
 export interface HistoryEntry {
