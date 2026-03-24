@@ -66,7 +66,7 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange, t }: StopC
               />
               <Label
                 htmlFor={`visited-${stop.id}`}
-                className="text-xs text-slate-500 cursor-pointer select-none"
+                className="text-xs text-slate-500 cursor-pointer select-none hidden sm:inline"
               >
                 {t.visited}
               </Label>
@@ -90,12 +90,12 @@ export default function StopCardGPS({ stop, isFirst, onVisitedChange, t }: StopC
         {/* Footer: start label + time */}
         <div className="flex items-center gap-4 mt-3 ml-12">
           {isFirst && (
-            <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
+            <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium whitespace-nowrap">
               <MapPin className="w-3.5 h-3.5" />
               {t.startingPoint}
             </span>
           )}
-          <span className="flex items-center gap-1 text-xs text-slate-400">
+          <span className="flex items-center gap-1 text-xs text-slate-400 whitespace-nowrap">
             <Clock className="w-3.5 h-3.5" />
             {t.suggestedTime}: {stop.suggestedDaysLabel}
           </span>
