@@ -3,7 +3,6 @@
 export type AppState = 'intake' | 'loading' | 'results'
 export type Flow = 'gps' | 'destination'
 export type TravelStyle = 'culture' | 'nature' | 'food' | 'adventure' | 'beaches' | 'architecture' | 'hidden'
-export type Transport = 'car' | 'motorcycle' | 'mixed'
 export type BestTime = 'Morning' | 'Afternoon' | 'Full day'
 
 export interface PracticalInfo {
@@ -47,7 +46,6 @@ export interface TripInput {
   duration: number
   stopsCount: number
   styles: TravelStyle[]
-  transport: Transport
   notes: string
 }
 
@@ -88,12 +86,6 @@ export const TRAVEL_STYLES: { value: TravelStyle; label: string }[] = [
   { value: 'hidden', label: 'Hidden gems' },
 ]
 
-export const TRANSPORT_MODES: { value: Transport; label: string; gmaps: string }[] = [
-  { value: 'car', label: 'Car', gmaps: 'driving' },
-  { value: 'motorcycle', label: 'Motorcycle', gmaps: 'driving' },
-  { value: 'mixed', label: 'Mixed', gmaps: 'transit' },
-]
-
 export const DURATION_OPTIONS: Record<Flow, number[]> = {
   gps: [1, 2, 3, 5, 7],
   destination: [3, 5, 7, 10, 14],
@@ -127,6 +119,5 @@ export const DEFAULT_FORM_DATA: TripInput = {
   duration: 5,
   stopsCount: 5,
   styles: ['culture', 'nature'],
-  transport: 'car',
   notes: '',
 }
