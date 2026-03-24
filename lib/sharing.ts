@@ -1,3 +1,4 @@
+import LZString from 'lz-string'
 import { Trip } from './constants'
 
 export function encodeTripToURL(trip: Trip): string {
@@ -5,8 +6,8 @@ export function encodeTripToURL(trip: Trip): string {
   // Omit `results` (both-lang data) to keep the URL short — shared trips use `result` only
   const { results: _omit, ...tripToShare } = trip
   const json = JSON.stringify(tripToShare)
-  const b64 = btoa(unescape(encodeURIComponent(json)))
-  return `${window.location.origin}${window.location.pathname}#data=${b64}`
+  const compressed = LZString.compressToEncodedURIComponent(json)
+  return `${window.location.origin}${window.location.pathname}#data=${compressed}`
 }
 
 export function decodeTripFromURL(): Trip | null {
@@ -14,8 +15,11 @@ export function decodeTripFromURL(): Trip | null {
   const hash = window.location.hash
   if (!hash.startsWith('#data=')) return null
   try {
-    const b64 = hash.replace('#data=', '')
-    return JSON.parse(decodeURIComponent(escape(atob(b64)))) as Trip
+    const compressed = hash.replace('#data=', '')
+    // Support both lz-string compressed and legacy base64 URLs
+    const json = LZString.decompressFromEncodedURIComponent(compressed)
+      ?? decodeURIComponent(escape(atob(compressed)))
+    return JSON.parse(json) as Trip
   } catch {
     return null
   }
