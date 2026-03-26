@@ -420,7 +420,7 @@ export default function Home() {
     setHistory([])
   }
 
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://YOURDOMAIN.com'
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://roadtrip-planner-tan.vercel.app'
 
   return (
     <>
