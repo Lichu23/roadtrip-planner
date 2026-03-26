@@ -1,0 +1,38 @@
+# Roadtrip Planner
+
+> Free AI-powered road trip generator. Creates smart tourist routes sorted by geographic proximity and opens them directly in Google Maps with one tap.
+
+## What it does
+
+Two planning flows:
+
+- **GPS flow** — User shares their current location. The app generates the best nearby stops for a day trip, sorted from nearest to farthest. Works as a live checklist as you go.
+- **Destination flow** — User types a city or country. The app builds a logical multi-day chain route connecting stops in geographic order, with split Google Maps links per day group.
+
+## How it works
+
+1. Real POIs are fetched from OpenTripMap (verified coordinates, filtered by travel style)
+2. Groq (Llama 3.3) writes descriptions, highlights, and practical info for each stop
+3. Stops are sorted using a nearest-neighbor algorithm (haversine distance)
+4. Google Maps links are generated — one tap opens the full route
+
+## Key features
+
+- No account required — entirely free
+- Works offline after first load (localStorage persistence)
+- Trips survive page refresh and can be shared via URL
+- Supports English and Spanish
+- Travel styles: culture, nature, food, adventure, beaches, architecture, hidden gems
+- Transport modes: car, motorcycle, mixed
+
+## Who it's for
+
+Travelers who want a ready-to-go itinerary in seconds — whether exploring a city today or planning a trip abroad next month.
+
+## Tech
+
+Next.js (Pages Router), Groq API (Llama 3.3-70b), OpenTripMap, Nominatim/OSM, Tailwind CSS, shadcn/ui. Hosted on Vercel.
+
+## Source
+
+Built as an open side project. No ads, no tracking beyond Vercel Analytics.

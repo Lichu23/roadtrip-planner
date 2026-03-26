@@ -1,3 +1,4 @@
+import Head from 'next/head'
 import { useState, useEffect, useMemo, startTransition } from 'react'
 import TopBar from '@/components/TopBar'
 import HistoryDrawer from '@/components/HistoryDrawer'
@@ -419,7 +420,69 @@ export default function Home() {
     setHistory([])
   }
 
+  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://YOURDOMAIN.com'
+
   return (
+    <>
+    <Head>
+      <title>Roadtrip Planner — AI Road Trip Generator</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="description" content="Generate a smart road trip in seconds. AI picks the best stops near you or for any destination, sorted by distance. Open in Google Maps with one tap. Free, no account needed." />
+      <link rel="canonical" href={SITE_URL} />
+
+      {/* hreflang — same URL serves EN and ES */}
+      <link rel="alternate" hrefLang="en" href={SITE_URL} />
+      <link rel="alternate" hrefLang="es" href={SITE_URL} />
+      <link rel="alternate" hrefLang="x-default" href={SITE_URL} />
+
+      {/* Open Graph */}
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={SITE_URL} />
+      <meta property="og:title" content="Roadtrip Planner — AI Road Trip Generator" />
+      <meta property="og:description" content="Generate a smart road trip in seconds. AI picks the best stops near you or for any destination, sorted by distance. Open in Google Maps with one tap." />
+      <meta property="og:image" content={`${SITE_URL}/og-image.png`} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:site_name" content="Roadtrip Planner" />
+      <meta property="og:locale" content="en_US" />
+      <meta property="og:locale:alternate" content="es_ES" />
+
+      {/* Twitter Card */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="Roadtrip Planner — AI Road Trip Generator" />
+      <meta name="twitter:description" content="Generate a smart road trip in seconds. AI picks the best stops near you or for any destination, sorted by distance. Open in Google Maps with one tap." />
+      <meta name="twitter:image" content={`${SITE_URL}/og-image.png`} />
+
+      {/* JSON-LD — WebApplication structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebApplication',
+            name: 'Roadtrip Planner',
+            url: SITE_URL,
+            description:
+              'AI-powered road trip planner that generates tourist routes sorted by geographic proximity. Works from GPS location or any destination worldwide.',
+            applicationCategory: 'TravelApplication',
+            operatingSystem: 'Web browser',
+            browserRequirements: 'Requires JavaScript',
+            inLanguage: ['en', 'es'],
+            isAccessibleForFree: true,
+            offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+            featureList: [
+              'AI-generated tourist routes',
+              'GPS-based day trips',
+              'Multi-day destination planning',
+              'Google Maps integration',
+              'Trip sharing via URL',
+              'Offline-capable via localStorage',
+            ],
+          }),
+        }}
+      />
+    </Head>
+
     <div className="min-h-screen bg-slate-50">
       <TopBar onHistoryOpen={() => setHistoryOpen(true)} lang={lang} onLangChange={handleLangChange} t={t} />
 
@@ -495,6 +558,42 @@ export default function Home() {
       )}
 
       </div>
+
+      {/* Static content for search engine and AI crawlers — not visible to users */}
+      <section aria-hidden="true" className="sr-only">
+        <h1>Roadtrip Planner — AI Road Trip Generator</h1>
+        <p>
+          Plan a road trip in seconds using AI. Enter your GPS location for a day trip or type any
+          city or country for a multi-day itinerary. Stops are sorted by geographic proximity so
+          the route makes physical sense. Open the full route in Google Maps with one tap.
+        </p>
+        <h2>How it works</h2>
+        <ol>
+          <li>Choose GPS mode (day trip near you) or Destination mode (city or country)</li>
+          <li>Select your travel style: culture, nature, food, adventure, beaches, architecture, or hidden gems</li>
+          <li>Choose trip duration and transport mode</li>
+          <li>AI generates the best stops with real coordinates from OpenTripMap</li>
+          <li>Stops are sorted using nearest-neighbor algorithm — no backtracking</li>
+          <li>Open the route in Google Maps with one tap</li>
+        </ol>
+        <h2>Features</h2>
+        <ul>
+          <li>Free — no account, no subscription required</li>
+          <li>Works in English and Spanish</li>
+          <li>Trips saved locally — survive page refresh</li>
+          <li>Share any trip via URL</li>
+          <li>Search history saves your last 10 trips</li>
+          <li>AI descriptions powered by Groq (Llama 3.3)</li>
+          <li>Real places from OpenTripMap with verified coordinates</li>
+        </ul>
+        <h2>Who is it for?</h2>
+        <p>
+          Travelers who want a smart, ready-to-go itinerary without spending hours researching.
+          Whether you are exploring a new city today or planning a trip abroad next month,
+          Roadtrip Planner gives you a logical route in under 10 seconds.
+        </p>
+      </section>
     </div>
+    </>
   )
 }
