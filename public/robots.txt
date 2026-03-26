@@ -21,4 +21,4 @@ Allow: /
 User-agent: anthropic-ai
 Allow: /
 
-Sitemap: https://YOURDOMAIN.com/sitemap.xml
+Sitemap: https://roadtrip-planner-tan.vercel.app/sitemap.xml
